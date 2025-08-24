@@ -61,6 +61,7 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 	notificationHandler := container.GetNotificationHandler()
 	statisticsHandler := container.GetStatisticsHandler()
 	categoryHandler := container.GetCategoryHandler()
+	settingsHandler := container.GetSettingsHandler()
 
 	fmt.Println("1")
 	// API路由组
@@ -140,6 +141,18 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 			categories.GET("/:id", middleware.AuthMiddleware(), categoryHandler.GetCategoryByID)
 			categories.PUT("/:id", middleware.AuthMiddleware(), categoryHandler.UpdateCategory)
 			categories.DELETE("/:id", middleware.AuthMiddleware(), categoryHandler.DeleteCategory)
+		}
+
+		// 设置相关路由
+		settings := apiGroup.Group("/settings")
+		{
+			settings.GET("", middleware.AuthMiddleware(), settingsHandler.GetSettings)
+			settings.PUT("/profile", middleware.AuthMiddleware(), settingsHandler.UpdateProfile)
+			settings.PUT("/password", middleware.AuthMiddleware(), settingsHandler.ChangePassword)
+			settings.PUT("/notifications", middleware.AuthMiddleware(), settingsHandler.UpdateNotificationSettings)
+			settings.PUT("/interface", middleware.AuthMiddleware(), settingsHandler.UpdateInterfaceSettings)
+			settings.GET("/export", middleware.AuthMiddleware(), settingsHandler.ExportData)
+			settings.DELETE("/completed-tasks", middleware.AuthMiddleware(), settingsHandler.ClearCompletedTasks)
 		}
 	}
 

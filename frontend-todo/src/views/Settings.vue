@@ -146,10 +146,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
+import { useSettingsStore } from '@/stores/settings'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const authStore = useAuthStore()
 const todoStore = useTodoStore()
+const settingsStore = useSettingsStore()
 
 // 响应式数据
 const activeTab = ref('profile')
@@ -220,64 +222,75 @@ const passwordRules = {
 const updateProfile = async () => {
   try {
     await profileFormRef.value.validate()
-    // 这里调用API更新用户信息
-    ElMessage.success('个人信息更新成功')
+    const success = await settingsStore.updateUserProfile(profileForm.value)
+    if (success) {
+      // 更新本地用户信息
+      authStore.user.username = profileForm.value.username
+      authStore.user.email = profileForm.value.email
+      authStore.user.nickname = profileForm.value.nickname
+    }
   } catch (error) {
-    ElMessage.error('更新失败')
+    console.error('更新失败:', error)
   }
 }
 
 const updatePassword = async () => {
   try {
     await passwordFormRef.value.validate()
-    // 这里调用API更新密码
-    ElMessage.success('密码修改成功')
-    passwordForm.value = {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
+    const success = await settingsStore.changeUserPassword({
+      current_password: passwordForm.value.currentPassword,
+      new_password: passwordForm.value.newPassword
+    })
+    if (success) {
+      passwordForm.value = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }
     }
   } catch (error) {
-    ElMessage.error('密码修改失败')
+    console.error('密码修改失败:', error)
   }
 }
 
-const saveNotificationSettings = () => {
-  // 保存通知设置
-  ElMessage.success('通知设置已保存')
+const saveNotificationSettings = async () => {
+  await settingsStore.saveNotificationSettings({
+    due_reminder: notificationSettings.value.dueReminder,
+    completion_notification: notificationSettings.value.completionNotification,
+    new_task_notification: notificationSettings.value.newTaskNotification,
+    email_notification: notificationSettings.value.emailNotification
+  })
 }
 
-const saveInterfaceSettings = () => {
-  // 保存界面设置
-  ElMessage.success('界面设置已保存')
+const saveInterfaceSettings = async () => {
+  await settingsStore.saveInterfaceSettings({
+    theme: interfaceSettings.value.theme,
+    language: interfaceSettings.value.language,
+    timezone: interfaceSettings.value.timezone
+  })
 }
 
-const exportData = () => {
-  const data = {
-    todos: todoStore.todos,
-    exportTime: new Date().toISOString()
-  }
-
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `taskmaster-export-${new Date().toISOString().split('T')[0]}.json`
-  a.click()
-  URL.revokeObjectURL(url)
-
-  ElMessage.success('数据导出成功')
+const exportData = async () => {
+  await settingsStore.exportUserData()
 }
 
-const handleFileChange = (file) => {
+const handleFileChange = async (file) => {
   const reader = new FileReader()
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target.result)
-      // 这里处理导入的数据
+      
+      // 验证数据格式
+      if (!data.todos || !Array.isArray(data.todos)) {
+        throw new Error('无效的数据格式')
+      }
+      
+      // 这里可以添加更多的数据导入逻辑
+      // 例如：批量创建待办事项
       ElMessage.success('数据导入成功')
     } catch (error) {
-      ElMessage.error('文件格式错误')
+      console.error('数据导入失败:', error)
+      ElMessage.error('文件格式错误或数据无效')
     }
   }
   reader.readAsText(file.raw)
@@ -295,22 +308,43 @@ const clearCompletedTasks = async () => {
       }
     )
 
-    // 这里调用API删除已完成的任务
-    ElMessage.success('已完成任务清理成功')
+    const success = await settingsStore.clearCompleted()
+    if (success) {
+      // 刷新待办事项列表
+      await todoStore.fetchTodos()
+    }
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('清理失败')
+      console.error('清理失败:', error)
     }
   }
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   // 初始化表单数据
   if (authStore.user) {
     profileForm.value.username = authStore.user.username || ''
     profileForm.value.email = authStore.user.email || ''
     profileForm.value.nickname = authStore.user.nickname || ''
+  }
+  
+  // 加载设置
+  await settingsStore.fetchSettings()
+  
+  // 同步设置到表单
+  const settings = settingsStore.settings
+  notificationSettings.value = {
+    dueReminder: settings.due_reminder,
+    completionNotification: settings.completion_notification,
+    newTaskNotification: settings.new_task_notification,
+    emailNotification: settings.email_notification
+  }
+  
+  interfaceSettings.value = {
+    theme: settings.theme,
+    language: settings.language,
+    timezone: settings.timezone
   }
 })
 </script>

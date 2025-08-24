@@ -204,6 +204,7 @@ func (dm *DatabaseManager) AutoMigrate() error {
 	// 自动迁移模型
 	if err := dm.db.AutoMigrate(
 		&models.User{},
+		&models.UserSettings{},
 		&models.Product{},
 		&models.TodoCategory{},
 		&models.TodoPriority{},

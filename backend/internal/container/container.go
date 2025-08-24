@@ -51,6 +51,7 @@ type ContainerInterface interface {
 	GetNotificationHandler() *handler.NotificationHandler
 	GetStatisticsHandler() *handler.StatisticsHandler
 	GetCategoryHandler() *handler.CategoryHandler
+	GetSettingsHandler() *handler.SettingsHandler
 
 	// 容器管理
 	Register(name string, service interface{})
@@ -84,6 +85,7 @@ func (c *Container) initializeAllServices() {
 	statisticsService := service.NewStatisticsService()
 	categoryService := service.NewCategoryService()
 	cacheService := service.NewCacheService(c.redis)
+	settingsService := service.NewSettingsService(c.db)
 
 	// 创建依赖缓存服务的组件
 	queryOptimizer := service.NewQueryOptimizer(c.db, cacheService)
@@ -96,6 +98,7 @@ func (c *Container) initializeAllServices() {
 	notificationHandler := handler.NewNotificationHandler()
 	statisticsHandler := handler.NewStatisticsHandler()
 	categoryHandler := handler.NewCategoryHandler()
+	settingsHandler := handler.NewSettingsHandler(settingsService)
 
 	// 注册所有服务
 	c.services["user_service"] = userService
@@ -105,6 +108,7 @@ func (c *Container) initializeAllServices() {
 	c.services["statistics_service"] = statisticsService
 	c.services["category_service"] = categoryService
 	c.services["cache_service"] = cacheService
+	c.services["settings_service"] = settingsService
 	c.services["query_optimizer"] = queryOptimizer
 	c.services["statistics_cache"] = statisticsCache
 
@@ -115,6 +119,7 @@ func (c *Container) initializeAllServices() {
 	c.services["notification_handler"] = notificationHandler
 	c.services["statistics_handler"] = statisticsHandler
 	c.services["category_handler"] = categoryHandler
+	c.services["settings_handler"] = settingsHandler
 
 	logger.Info("All services initialized successfully")
 }
@@ -194,6 +199,10 @@ func (c *Container) GetStatisticsHandler() *handler.StatisticsHandler {
 
 func (c *Container) GetCategoryHandler() *handler.CategoryHandler {
 	return c.services["category_handler"].(*handler.CategoryHandler)
+}
+
+func (c *Container) GetSettingsHandler() *handler.SettingsHandler {
+	return c.services["settings_handler"].(*handler.SettingsHandler)
 }
 
 // Register 注册服务
