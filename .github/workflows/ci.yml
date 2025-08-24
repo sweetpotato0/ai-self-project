@@ -96,25 +96,25 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        cache-dependency-path: frontend-todo/package-lock.json
+        cache-dependency-path: frontend/package-lock.json
 
     - name: Install dependencies
-      working-directory: ./frontend-todo
+      working-directory: ./frontend
       run: npm ci
 
     - name: Run linter
-      working-directory: ./frontend-todo
+      working-directory: ./frontend
       run: npm run lint
 
     - name: Build frontend
-      working-directory: ./frontend-todo
+      working-directory: ./frontend
       run: npm run build
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
         name: frontend-dist
-        path: frontend-todo/dist
+        path: frontend/dist
 
   # Security Scan
   security-scan:

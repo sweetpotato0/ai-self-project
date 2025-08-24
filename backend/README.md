@@ -229,11 +229,11 @@ make docker-run    # Docker Compose启动
 
 ### 前端开发
 
-前端项目位于 `../frontend-todo/` 目录，请参考前端的README文档。
+前端项目位于 `../frontend/` 目录，请参考前端的README文档。
 
 ```bash
 # 进入前端目录
-cd ../frontend-todo
+cd ../frontend
 
 # 安装依赖
 npm install

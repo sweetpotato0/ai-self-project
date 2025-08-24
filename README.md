@@ -13,7 +13,7 @@ ai-self-project/
 │   ├── pkg/                # 公共包
 │   ├── scripts/            # 自动化脚本
 │   └── docs/               # 文档
-├── frontend/               # 前端应用（待开发）
+├── frontend/               # 前端应用
 ├── docs/                   # 项目文档
 └── scripts/                # 项目级脚本
 ```
@@ -121,7 +121,7 @@ docker-compose up -d
 - ✅ 部署配置 (100%)
 
 ### 前端状态
-- 🔄 待开发
+- 🔄 待更新
 
 ## 🤝 贡献指南
 

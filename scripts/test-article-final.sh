@@ -20,7 +20,7 @@ fi
 
 # 测试编译
 echo -e "\n2. 测试前端编译..."
-cd frontend-todo
+cd frontend
 if npm run build > /dev/null 2>&1; then
     echo "✅ 前端编译成功"
 else

@@ -49,7 +49,7 @@ echo "🗄️ 运行数据库迁移..."
 
 echo "📦 安装前端依赖..."
 # 安装前端依赖
-cd ../frontend-todo
+cd ../frontend
 if [ ! -d node_modules ]; then
     npm install
 fi
@@ -65,7 +65,7 @@ sleep 3
 
 echo "🎨 启动前端服务..."
 # 启动前端服务（后台运行）
-cd ../frontend-todo
+cd ../frontend
 npm run dev &
 FRONTEND_PID=$!
 cd ../backend

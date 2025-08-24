@@ -128,11 +128,13 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
+import { useSettingsStore } from '@/stores/settings'
 import { ElMessage } from 'element-plus'
 import { Camera } from '@element-plus/icons-vue'
 
 const authStore = useAuthStore()
 const todoStore = useTodoStore()
+const settingsStore = useSettingsStore()
 
 const activeTab = ref('basic')
 const userAvatar = ref('')
@@ -210,11 +212,20 @@ const saveProfile = async () => {
     await profileFormRef.value.validate()
     saving.value = true
 
-    // 这里调用API保存个人资料
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 调用设置store的个人资料更新API
+    const success = await settingsStore.updateUserProfile({
+      username: profileForm.username,
+      email: profileForm.email,
+      nickname: profileForm.nickname,
+      bio: profileForm.bio
+    })
 
-    ElMessage.success('个人资料保存成功')
+    if (success) {
+      // 重新加载个人资料数据
+      loadProfileData()
+    }
   } catch (error) {
+    console.error('保存失败:', error)
     ElMessage.error('保存失败')
   } finally {
     saving.value = false
@@ -231,12 +242,17 @@ const changePassword = async () => {
     await passwordFormRef.value.validate()
     changingPassword.value = true
 
-    // 这里调用API修改密码
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 调用设置store的密码修改API
+    const success = await settingsStore.changeUserPassword({
+      current_password: passwordForm.currentPassword,
+      new_password: passwordForm.newPassword
+    })
 
-    ElMessage.success('密码修改成功')
-    resetPasswordForm()
+    if (success) {
+      resetPasswordForm()
+    }
   } catch (error) {
+    console.error('密码修改失败:', error)
     ElMessage.error('密码修改失败')
   } finally {
     changingPassword.value = false
@@ -264,13 +280,16 @@ const loadStats = () => {
 }
 
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
   // 初始化用户头像
   if (authStore.user?.username) {
     userAvatar.value = `https://api.dicebear.com/7.x/avataaars/svg?seed=${authStore.user.username}`
   }
 
   loadProfileData()
+  
+  // 加载TODO数据以显示统计信息
+  await todoStore.fetchTodos()
   loadStats()
 })
 </script>

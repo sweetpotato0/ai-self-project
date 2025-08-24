@@ -8,7 +8,7 @@ echo "1. 检查前端服务状态..."
 if curl -s http://localhost:5173 > /dev/null; then
     echo "✅ 前端服务运行正常 (http://localhost:5173)"
 else
-    echo "❌ 前端服务未运行，请先启动: cd frontend-todo && npm run dev"
+    echo "❌ 前端服务未运行，请先启动: cd frontend && npm run dev"
     exit 1
 fi
 

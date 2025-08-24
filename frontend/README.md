@@ -25,7 +25,7 @@
 ### 安装依赖
 
 ```bash
-cd frontend-todo
+cd frontend
 npm install
 ```
 

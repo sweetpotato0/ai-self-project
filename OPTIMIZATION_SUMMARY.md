@@ -32,7 +32,7 @@ Handler -> Service -> Repository -> Database
 ### 2. 前端类型安全
 
 **新增文件：**
-- `frontend-todo/src/types/statistics.ts` - TypeScript类型定义
+- `frontend/src/types/statistics.ts` - TypeScript类型定义
 
 **优化内容：**
 - 添加完整的类型定义

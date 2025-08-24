@@ -111,7 +111,7 @@ ai-self-project/
 │   ├── pkg/                # 公共包
 │   ├── scripts/            # 脚本
 │   └── Makefile            # 构建工具
-└── frontend-todo/          # 前端项目
+└── frontend/          # 前端项目
     ├── src/
     │   ├── api/            # API接口
     │   ├── components/     # 组件
@@ -131,7 +131,7 @@ cd backend
 make serve-sqlite-dev
 
 # 2. 启动前端
-cd frontend-todo
+cd frontend
 npm install
 npm run dev
 ```
@@ -143,7 +143,7 @@ cd backend
 make serve-postgres
 
 # 前端构建
-cd frontend-todo
+cd frontend
 npm run build
 ```
 
