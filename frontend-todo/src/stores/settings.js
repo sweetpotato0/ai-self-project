@@ -59,6 +59,19 @@ export const useSettingsStore = defineStore('settings', {
       this.loading = true
       try {
         await updateProfile(profileData)
+        
+        // 更新本地用户信息
+        const { useAuthStore } = await import('./auth')
+        const authStore = useAuthStore()
+        if (authStore.user) {
+          authStore.user.username = profileData.username
+          authStore.user.email = profileData.email
+          authStore.user.nickname = profileData.nickname
+          
+          // 更新localStorage中的用户信息
+          localStorage.setItem('user', JSON.stringify(authStore.user))
+        }
+        
         ElMessage.success('个人资料更新成功')
         return true
       } catch (error) {

@@ -222,13 +222,7 @@ const passwordRules = {
 const updateProfile = async () => {
   try {
     await profileFormRef.value.validate()
-    const success = await settingsStore.updateUserProfile(profileForm.value)
-    if (success) {
-      // 更新本地用户信息
-      authStore.user.username = profileForm.value.username
-      authStore.user.email = profileForm.value.email
-      authStore.user.nickname = profileForm.value.nickname
-    }
+    await settingsStore.updateUserProfile(profileForm.value)
   } catch (error) {
     console.error('更新失败:', error)
   }

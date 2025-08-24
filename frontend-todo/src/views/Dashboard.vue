@@ -21,8 +21,6 @@
         class="sidebar-menu"
         :collapse="sidebarCollapsed"
         background-color="transparent"
-        text-color="#fff"
-        active-text-color="#409EFF"
       >
         <el-menu-item index="dashboard" @click="navigateTo('dashboard')">
           <el-icon><DataBoard /></el-icon>
@@ -181,9 +179,7 @@ onMounted(() => {
 
 .sidebar {
   width: 260px;
-  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -198,7 +194,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .logo {
@@ -215,11 +210,9 @@ onMounted(() => {
 .logo-text {
   font-size: 18px;
   font-weight: bold;
-  color: #fff;
 }
 
 .collapse-btn {
-  color: #fff;
   font-size: 16px;
 }
 
@@ -247,7 +240,6 @@ onMounted(() => {
 
 .sidebar-footer {
   padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -266,17 +258,11 @@ onMounted(() => {
 
 .username {
   font-size: 14px;
-  color: #fff;
   font-weight: 500;
 }
 
 .user-role {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.logout-btn {
-  color: #fff;
 }
 
 .main-content {

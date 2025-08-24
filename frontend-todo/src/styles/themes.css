@@ -127,6 +127,19 @@ body {
   background-color: var(--bg-tertiary);
 }
 
+/* 输入框前缀图标居中 */
+.el-input__prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.el-input__prefix-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .dark .el-radio__input.is-checked .el-radio__inner {
   border-color: #409eff;
   background-color: #409eff;
@@ -252,6 +265,82 @@ body {
 
 .settings-section p {
   color: var(--text-secondary);
+}
+
+/* 侧边栏主题适配 */
+.sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+.logo-text {
+  color: var(--text-primary);
+}
+
+.collapse-btn {
+  color: var(--text-primary);
+}
+
+.logout-btn {
+  color: var(--text-primary);
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.logout-btn:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.username {
+  color: var(--text-primary);
+}
+
+.user-role {
+  color: var(--text-secondary);
+}
+
+/* 侧边栏菜单项 */
+.sidebar-menu .el-menu-item {
+  color: var(--text-secondary);
+}
+
+.sidebar-menu .el-menu-item:hover {
+  background: rgba(64, 158, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.sidebar-menu .el-menu-item.is-active {
+  background: rgba(64, 158, 255, 0.2);
+  color: #409EFF;
+}
+
+/* 修复浅色主题下的侧边栏样式 */
+:root:not(.dark) .sidebar {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+:root:not(.dark) .sidebar .el-menu-item {
+  color: var(--text-secondary);
+}
+
+:root:not(.dark) .sidebar .el-menu-item:hover {
+  color: var(--text-primary);
+  background: rgba(64, 158, 255, 0.1);
+}
+
+:root:not(.dark) .sidebar .el-menu-item.is-active {
+  color: #409EFF;
+  background: rgba(64, 158, 255, 0.15);
 }
 
 /* 响应式适配 */
