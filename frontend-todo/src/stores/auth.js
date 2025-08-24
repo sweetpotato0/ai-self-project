@@ -23,6 +23,12 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('user', JSON.stringify(userData))
 
       ElMessage.success('登录成功')
+      
+      // 登录成功后初始化设置
+      const { useSettingsStore } = await import('./settings')
+      const settingsStore = useSettingsStore()
+      settingsStore.initializeSettings()
+      
       return true
     } catch (error) {
       ElMessage.error('登录失败')
@@ -63,10 +69,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 初始化
-  const init = () => {
+  const init = async () => {
     const savedUser = localStorage.getItem('user')
     if (savedUser && token.value) {
       user.value = JSON.parse(savedUser)
+      
+      // 如果用户已经登录，初始化设置
+      const { useSettingsStore } = await import('./settings')
+      const settingsStore = useSettingsStore()
+      settingsStore.initializeSettings()
     }
   }
 

@@ -29,6 +29,12 @@ export const useSettingsStore = defineStore('settings', {
   actions: {
     // 获取设置
     async fetchSettings() {
+      // 检查是否已登录
+      const token = localStorage.getItem('token')
+      if (!token) {
+        return
+      }
+      
       this.loading = true
       try {
         const response = await getSettings()
@@ -37,7 +43,10 @@ export const useSettingsStore = defineStore('settings', {
         }
       } catch (error) {
         console.error('获取设置失败:', error)
-        ElMessage.error('获取设置失败')
+        // 只有在不是401错误时才显示错误消息
+        if (error.response?.status !== 401) {
+          ElMessage.error('获取设置失败')
+        }
       } finally {
         this.loading = false
       }

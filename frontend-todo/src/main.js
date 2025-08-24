@@ -7,7 +7,7 @@ import { createApp } from 'vue'
 
 import App from './App.vue'
 import router from './router'
-import { useSettingsStore } from './stores/settings'
+import { useAuthStore } from './stores/auth'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -26,6 +26,6 @@ app.use(ElementPlus, {
 // 初始化设置（在应用挂载后）
 app.mount('#app')
 
-// 初始化设置存储
-const settingsStore = useSettingsStore()
-settingsStore.initializeSettings()
+// 初始化认证状态（会自动初始化设置如果用户已登录）
+const authStore = useAuthStore()
+authStore.init()
