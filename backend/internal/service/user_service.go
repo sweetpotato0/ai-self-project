@@ -37,6 +37,7 @@ type LoginResponse struct {
 type UpdateProfileRequest struct {
 	Username string `json:"username" validate:"omitempty,min=3,max=50"`
 	Email    string `json:"email" validate:"omitempty,email"`
+	Nickname string `json:"nickname"`
 	Avatar   string `json:"avatar"`
 	Bio      string `json:"bio"`
 }
@@ -167,6 +168,9 @@ func (s *UserService) UpdateProfile(userID uint, req UpdateProfileRequest) (*mod
 	}
 	if req.Email != "" {
 		user.Email = req.Email
+	}
+	if req.Nickname != "" {
+		user.Nickname = req.Nickname
 	}
 
 	if err := db.Save(&user).Error; err != nil {

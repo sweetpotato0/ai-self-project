@@ -2,6 +2,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import './styles/themes.css'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 

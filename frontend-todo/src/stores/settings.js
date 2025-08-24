@@ -9,6 +9,8 @@ import {
   exportData,
   clearCompletedTasks
 } from '@/api/settings'
+import { notificationManager } from '@/utils/notificationManager'
+import { localeManager } from '@/utils/localeManager'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
@@ -90,6 +92,10 @@ export const useSettingsStore = defineStore('settings', {
       try {
         await updateNotificationSettings(notificationData)
         this.settings = { ...this.settings, ...notificationData }
+        
+        // 更新通知管理器的设置
+        notificationManager.updateSettings(notificationData)
+        
         ElMessage.success('通知设置已保存')
         return true
       } catch (error) {
@@ -109,7 +115,19 @@ export const useSettingsStore = defineStore('settings', {
         this.settings = { ...this.settings, ...interfaceData }
         
         // 应用主题设置
-        this.applyTheme(interfaceData.theme)
+        if (interfaceData.theme) {
+          this.applyTheme(interfaceData.theme)
+        }
+        
+        // 应用语言设置
+        if (interfaceData.language) {
+          localeManager.updateLanguage(interfaceData.language)
+        }
+        
+        // 应用时区设置  
+        if (interfaceData.timezone) {
+          localeManager.updateTimezone(interfaceData.timezone)
+        }
         
         ElMessage.success('界面设置已保存')
         return true
@@ -169,22 +187,33 @@ export const useSettingsStore = defineStore('settings', {
     // 应用主题
     applyTheme(theme) {
       const root = document.documentElement
+      const body = document.body
+      
+      // 清除之前的主题类
+      root.classList.remove('dark')
+      body.classList.remove('dark')
+      root.removeAttribute('data-theme')
       
       if (theme === 'dark') {
         root.classList.add('dark')
+        body.classList.add('dark')
+        root.setAttribute('data-theme', 'dark')
         localStorage.setItem('theme', 'dark')
       } else if (theme === 'light') {
-        root.classList.remove('dark')
+        root.setAttribute('data-theme', 'light')
         localStorage.setItem('theme', 'light')
       } else if (theme === 'auto') {
+        root.setAttribute('data-theme', 'auto')
         const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
         if (isDarkMode) {
           root.classList.add('dark')
-        } else {
-          root.classList.remove('dark')
+          body.classList.add('dark')
         }
         localStorage.setItem('theme', 'auto')
       }
+      
+      // 触发主题切换事件
+      window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme } }))
     },
 
     // 初始化设置（应用程序启动时调用）
@@ -196,15 +225,24 @@ export const useSettingsStore = defineStore('settings', {
         const savedTheme = localStorage.getItem('theme') || this.settings.theme
         this.applyTheme(savedTheme)
         
+        // 应用语言和时区设置
+        localeManager.updateLanguage(this.settings.language)
+        localeManager.updateTimezone(this.settings.timezone)
+        
+        // 更新通知管理器设置
+        notificationManager.updateSettings(this.notificationSettings)
+        
         // 监听系统主题变化（当设置为auto时）
-        if (savedTheme === 'auto') {
-          const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-          mediaQuery.addEventListener('change', (e) => {
-            if (this.settings.theme === 'auto') {
-              this.applyTheme('auto')
-            }
-          })
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+        const handleSystemThemeChange = (e) => {
+          if (this.settings.theme === 'auto' || savedTheme === 'auto') {
+            this.applyTheme('auto')
+          }
         }
+        mediaQuery.addEventListener('change', handleSystemThemeChange)
+        
+        // 存储监听器引用以便清理
+        window.systemThemeListener = handleSystemThemeChange
       } catch (error) {
         console.error('初始化设置失败:', error)
       }

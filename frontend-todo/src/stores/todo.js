@@ -2,6 +2,7 @@ import { todoApi } from '@/api/todo'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { notificationManager } from '@/utils/notificationManager'
 
 export const useTodoStore = defineStore('todo', () => {
   const todos = ref([])
@@ -13,6 +14,9 @@ export const useTodoStore = defineStore('todo', () => {
     try {
       const response = await todoApi.getTodos()
       todos.value = response.data.todos || []
+      
+      // 检查任务到期情况并发送通知
+      notificationManager.applyNotificationSettings(todos.value)
     } catch (error) {
       ElMessage.error('获取TODO列表失败')
     } finally {
@@ -24,7 +28,12 @@ export const useTodoStore = defineStore('todo', () => {
   const createTodo = async (todoData) => {
     try {
       const response = await todoApi.createTodo(todoData)
-      todos.value.unshift(response.data.todo)
+      const newTodo = response.data.todo
+      todos.value.unshift(newTodo)
+      
+      // 发送新任务通知
+      notificationManager.showNewTaskNotification(newTodo)
+      
       ElMessage.success('TODO创建成功')
       return true
     } catch (error) {
@@ -37,10 +46,19 @@ export const useTodoStore = defineStore('todo', () => {
   const updateTodo = async (id, todoData) => {
     try {
       const response = await todoApi.updateTodo(id, todoData)
+      const updatedTodo = response.data.todo
       const index = todos.value.findIndex(todo => todo.id === id)
+      const oldTodo = index !== -1 ? todos.value[index] : null
+      
       if (index !== -1) {
-        todos.value[index] = response.data.todo
+        todos.value[index] = updatedTodo
       }
+      
+      // 如果任务被标记为完成，发送完成通知
+      if (oldTodo && !oldTodo.completed && updatedTodo.completed) {
+        notificationManager.showCompletionNotification(updatedTodo)
+      }
+      
       ElMessage.success('TODO更新成功')
       return true
     } catch (error) {
