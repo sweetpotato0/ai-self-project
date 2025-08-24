@@ -8,11 +8,20 @@
           <span v-if="!sidebarCollapsed" class="logo-text">TaskMaster</span>
         </div>
         <el-button
+          v-if="!sidebarCollapsed"
           type="text"
           @click="toggleSidebar"
           class="collapse-btn"
         >
-          <el-icon><Fold v-if="!sidebarCollapsed" /><Expand v-else /></el-icon>
+          <el-icon><Fold /></el-icon>
+        </el-button>
+        <el-button
+          v-else
+          type="text"
+          @click="toggleSidebar"
+          class="collapse-btn collapsed-toggle"
+        >
+          <el-icon><Expand /></el-icon>
         </el-button>
       </div>
 
@@ -22,40 +31,93 @@
         :collapse="sidebarCollapsed"
         background-color="transparent"
       >
-        <el-menu-item index="dashboard" @click="navigateTo('dashboard')">
-          <el-icon><DataBoard /></el-icon>
-          <span>仪表盘</span>
-        </el-menu-item>
+        <template v-if="sidebarCollapsed">
+          <el-tooltip content="仪表盘" placement="right">
+            <el-menu-item index="dashboard" @click="navigateTo('dashboard')">
+              <el-icon><DataBoard /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
 
-        <el-menu-item index="todos" @click="navigateTo('todos')">
-          <el-icon><List /></el-icon>
-          <span>TODO清单</span>
-        </el-menu-item>
+          <el-tooltip content="TODO清单" placement="right">
+            <el-menu-item index="todos" @click="navigateTo('todos')">
+              <el-icon><List /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
 
-        <el-menu-item index="calendar" @click="navigateTo('calendar')">
-          <el-icon><Calendar /></el-icon>
-          <span>日程安排</span>
-        </el-menu-item>
+          <el-tooltip content="日程安排" placement="right">
+            <el-menu-item index="calendar" @click="navigateTo('calendar')">
+              <el-icon><Calendar /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
 
-        <el-menu-item index="analytics" @click="navigateTo('analytics')">
-          <el-icon><TrendCharts /></el-icon>
-          <span>数据分析</span>
-        </el-menu-item>
+          <el-tooltip content="数据分析" placement="right">
+            <el-menu-item index="analytics" @click="navigateTo('analytics')">
+              <el-icon><TrendCharts /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
 
-        <el-menu-item index="articles" @click="navigateTo('articles')">
-          <el-icon><Document /></el-icon>
-          <span>个人文章</span>
-        </el-menu-item>
+          <el-tooltip content="个人文章" placement="right">
+            <el-menu-item index="articles" @click="navigateTo('articles')">
+              <el-icon><Document /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
 
-        <el-menu-item index="settings" @click="navigateTo('settings')">
-          <el-icon><Setting /></el-icon>
-          <span>系统设置</span>
-        </el-menu-item>
+          <el-tooltip content="系统设置" placement="right">
+            <el-menu-item index="settings" @click="navigateTo('settings')">
+              <el-icon><Setting /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
+        </template>
+
+        <template v-else>
+          <el-menu-item index="dashboard" @click="navigateTo('dashboard')">
+            <el-icon><DataBoard /></el-icon>
+            <span>仪表盘</span>
+          </el-menu-item>
+
+          <el-menu-item index="todos" @click="navigateTo('todos')">
+            <el-icon><List /></el-icon>
+            <span>TODO清单</span>
+          </el-menu-item>
+
+          <el-menu-item index="calendar" @click="navigateTo('calendar')">
+            <el-icon><Calendar /></el-icon>
+            <span>日程安排</span>
+          </el-menu-item>
+
+          <el-menu-item index="analytics" @click="navigateTo('analytics')">
+            <el-icon><TrendCharts /></el-icon>
+            <span>数据分析</span>
+          </el-menu-item>
+
+          <el-menu-item index="articles" @click="navigateTo('articles')">
+            <el-icon><Document /></el-icon>
+            <span>个人文章</span>
+          </el-menu-item>
+
+          <el-menu-item index="settings" @click="navigateTo('settings')">
+            <el-icon><Setting /></el-icon>
+            <span>系统设置</span>
+          </el-menu-item>
+        </template>
       </el-menu>
 
       <div class="sidebar-footer">
         <div class="user-info">
-          <el-avatar :size="32" :src="userAvatar">
+          <el-tooltip 
+            v-if="sidebarCollapsed" 
+            :content="authStore.user?.username || '用户'" 
+            placement="right"
+          >
+            <el-avatar :size="32" :src="userAvatar">
+              {{ authStore.user?.username?.charAt(0)?.toUpperCase() }}
+            </el-avatar>
+          </el-tooltip>
+          <el-avatar 
+            v-else 
+            :size="32" 
+            :src="userAvatar"
+          >
             {{ authStore.user?.username?.charAt(0)?.toUpperCase() }}
           </el-avatar>
           <div v-if="!sidebarCollapsed" class="user-details">
@@ -63,7 +125,21 @@
             <div class="user-role">管理员</div>
           </div>
         </div>
-        <el-button type="text" @click="logout" class="logout-btn">
+        <el-tooltip 
+          v-if="sidebarCollapsed" 
+          content="退出登录" 
+          placement="right"
+        >
+          <el-button type="text" @click="logout" class="logout-btn">
+            <el-icon><SwitchButton /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-button 
+          v-else 
+          type="text" 
+          @click="logout" 
+          class="logout-btn"
+        >
           <el-icon><SwitchButton /></el-icon>
         </el-button>
       </div>
