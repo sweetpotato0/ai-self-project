@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otlp-collector-config
+  labels:
+    app: otlp-collector
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+          grpc:
+            endpoint: 0.0.0.0:4317
+
+    processors:
+      batch:
+        timeout: 1s
+        send_batch_size: 1024
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 1500
+
+    exporters:
+      jaeger:
+        endpoint: jaeger-collector:14250
+        tls:
+          insecure: true
+      prometheus:
+        endpoint: 0.0.0.0:9464
+        namespace: ai-self-project
+        const_labels:
+          label1: value1
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch, memory_limiter]
+          exporters: [jaeger]
+        metrics:
+          receivers: [otlp]
+          processors: [batch, memory_limiter]
+          exporters: [prometheus]
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otlp-collector
+  labels:
+    app: otlp-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otlp-collector
+  template:
+    metadata:
+      labels:
+        app: otlp-collector
+    spec:
+      containers:
+      - name: otlp-collector
+        image: otel/opentelemetry-collector:latest
+        ports:
+        - containerPort: 4317
+          name: otlp-grpc
+        - containerPort: 4318
+          name: otlp-http
+        - containerPort: 9464
+          name: prometheus
+        volumeMounts:
+        - name: config
+          mountPath: /conf
+        command:
+        - "/otelcol"
+        - "--config=/conf/config.yaml"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+      volumes:
+      - name: config
+        configMap:
+          name: otlp-collector-config

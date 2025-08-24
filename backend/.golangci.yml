@@ -1,0 +1,110 @@
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs:
+    - vendor
+    - node_modules
+    - bin
+    - dist
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  golint:
+    min-confidence: 0.8
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: gin-web-framework
+  gocyclo:
+    min-complexity: 15
+  maligned:
+    suggest-new: true
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  misspell:
+    locale: US
+  lll:
+    line-length: 120
+  gofumpt:
+    extra-rules: true
+  depguard:
+    list-type: blacklist
+    packages:
+      - log
+    packages-with-error-message:
+      - log: "使用 gin-web-framework/pkg/logger 代替标准库 log"
+
+linters:
+  enable:
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exportloopref
+    - exhaustive
+    - goconst
+    - gocritic
+    - gofmt
+    - gofumpt
+    - goimports
+    - gomnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - gocyclo
+  disable:
+    - funlen
+    - gocognit
+    - godot
+    - godox
+    - goerr113
+    - gochecknoinits
+    - gochecknoglobals
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gomnd
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    - path: cmd/
+      linters:
+        - gocyclo
+    - text: "weak cryptographic primitive"
+      linters:
+        - gosec
+    - text: "should have a package comment"
+      linters:
+        - stylecheck
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

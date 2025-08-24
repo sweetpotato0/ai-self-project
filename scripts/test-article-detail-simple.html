@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文章详情测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .article {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .content {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .debug {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>文章详情功能测试</h1>
+
+    <div class="debug">
+        <h3>测试说明：</h3>
+        <p>1. 确保后端运行在 http://localhost:8080</p>
+        <p>2. 确保前端运行在 http://localhost:3000</p>
+        <p>3. 点击下面的链接测试文章详情页面</p>
+    </div>
+
+    <div class="article">
+        <h2>测试链接</h2>
+        <p><a href="http://localhost:3000/articles/1" target="_blank">查看文章详情 (ID: 1)</a></p>
+        <p><a href="http://localhost:3000/dashboard/articles/1" target="_blank">通过仪表盘查看文章详情 (ID: 1)</a></p>
+    </div>
+
+    <div class="article">
+        <h2>API测试</h2>
+        <button onclick="testAPI()">测试文章API</button>
+        <div id="api-result"></div>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '测试中...';
+
+            try {
+                // 先登录
+                const loginResponse = await fetch('http://localhost:8080/api/v1/users/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: '123456'
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+
+                if (loginData.code === 200) {
+                    const token = loginData.data.token;
+
+                    // 获取文章详情
+                    const articleResponse = await fetch('http://localhost:8080/api/v1/articles/1', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    const articleData = await articleResponse.json();
+
+                    if (articleData.code === 200) {
+                        resultDiv.innerHTML = `
+                            <h3>API测试成功</h3>
+                            <p><strong>文章标题:</strong> ${articleData.data.title}</p>
+                            <p><strong>文章内容长度:</strong> ${articleData.data.content.length} 字符</p>
+                            <p><strong>内容预览:</strong> ${articleData.data.content.substring(0, 100)}...</p>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `<p style="color: red;">获取文章失败: ${articleData.message}</p>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<p style="color: red;">登录失败: ${loginData.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">API测试失败: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

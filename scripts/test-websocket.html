@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+
+    <script>
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0LCJ1c2VybmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlzcyI6Imdpbi13ZWItZnJhbWV3b3JrIiwiZXhwIjoxNzU2MDQ0NjI4LCJuYmYiOjE3NTU5NTgyMjgsImlhdCI6MTc1NTk1ODIyOH0.2Uby4KFCc5STaS04PNVcigtDvwqseQWJZ0n8EsixxkU';
+        const wsUrl = `ws://localhost:8080/api/v1/ws?token=${token}`;
+
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+
+        function addMessage(message) {
+            const div = document.createElement('div');
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            messagesDiv.appendChild(div);
+        }
+
+        try {
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = function() {
+                statusDiv.textContent = 'Connected!';
+                statusDiv.style.color = 'green';
+                addMessage('WebSocket connected successfully');
+            };
+
+            ws.onmessage = function(event) {
+                addMessage('Received: ' + event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Parsed message:', data);
+                } catch (e) {
+                    console.log('Raw message:', event.data);
+                }
+            };
+
+            ws.onclose = function() {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.style.color = 'red';
+                addMessage('WebSocket disconnected');
+            };
+
+            ws.onerror = function(error) {
+                statusDiv.textContent = 'Error';
+                statusDiv.style.color = 'red';
+                addMessage('WebSocket error: ' + error);
+            };
+
+        } catch (error) {
+            statusDiv.textContent = 'Failed to connect';
+            statusDiv.style.color = 'red';
+            addMessage('Failed to create WebSocket: ' + error);
+        }
+    </script>
+</body>
+</html>

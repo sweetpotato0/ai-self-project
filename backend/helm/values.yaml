@@ -1,0 +1,214 @@
+# Default values for ai-self-project-backend
+replicaCount: 3
+
+image:
+  repository: ai-self-project-backend
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+  capabilities:
+    drop:
+    - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: api.ai-self-project.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# 应用配置
+config:
+  server:
+    port: "8080"
+    mode: "release"
+    readTimeout: "30s"
+    writeTimeout: "30s"
+    idleTimeout: "120s"
+    maxHeaderBytes: 1048576
+    enableMetrics: true
+    enablePprof: false
+    shutdownTimeout: "30s"
+
+  database:
+    driver: "postgres"
+    host: "postgres-service"
+    port: "5432"
+    username: "postgres"
+    password: "password"
+    dbName: "ai_self_project"
+    sslMode: "require"
+    maxOpenConns: 25
+    maxIdleConns: 25
+    connMaxLifetime: "5m"
+    connMaxIdleTime: "5m"
+    enableMigration: true
+    logLevel: "warn"
+
+  redis:
+    host: "redis-service"
+    port: "6379"
+    password: ""
+    db: 0
+    poolSize: 10
+    minIdleConns: 5
+    maxConnAge: "30m"
+    poolTimeout: "30s"
+    idleTimeout: "5m"
+    idleCheckFreq: "1m"
+    enableCluster: false
+
+  jwt:
+    secret: "your_super_secret_jwt_key_that_is_at_least_32_characters_long"
+    expireHours: 24
+    refreshExpire: 168
+    issuer: "ai-self-project"
+    signingMethod: "HS256"
+    tokenLookup: "header:Authorization"
+    tokenHeadName: "Bearer"
+
+  app:
+    name: "AI Self Project Backend"
+    version: "1.0.0"
+    environment: "production"
+    debug: false
+    logLevel: "info"
+    logFormat: "json"
+    timezone: "UTC"
+
+# 监控配置
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: "30s"
+    scrapeTimeout: "10s"
+  prometheusRule:
+    enabled: true
+  grafanaDashboard:
+    enabled: true
+
+# 追踪配置
+telemetry:
+  enabled: true
+  otlp:
+    enabled: true
+    endpoint: "http://jaeger-collector:4318/v1/traces"
+  tracing:
+    enabled: true
+  metrics:
+    enabled: true
+  service:
+    name: "ai-self-project-backend"
+    version: "1.0.0"
+    environment: "production"
+
+# 安全配置
+security:
+  cors:
+    enabled: true
+    allowOrigins:
+      - "https://ai-self-project.com"
+      - "https://www.ai-self-project.com"
+    allowMethods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "OPTIONS"
+    allowHeaders:
+      - "Content-Type"
+      - "Authorization"
+      - "X-Request-ID"
+    maxAge: "24h"
+
+  rateLimit:
+    enabled: true
+    requestsPerMinute: 100
+    burstSize: 20
+
+  auth:
+    enabled: true
+    jwtSecret: "your_super_secret_jwt_key_that_is_at_least_32_characters_long"
+    tokenExpiration: "24h"
+    refreshTokenExpiration: "168h"
+
+# 数据库配置
+database:
+  enabled: true
+  type: "postgres"
+  host: "postgres-service"
+  port: "5432"
+  name: "ai_self_project"
+  username: "postgres"
+  password: "password"
+  sslMode: "require"
+  maxConnections: 25
+  maxIdleConnections: 25
+  connectionMaxLifetime: "5m"
+  connectionMaxIdleTime: "5m"
+
+# Redis配置
+redis:
+  enabled: true
+  host: "redis-service"
+  port: "6379"
+  password: ""
+  db: 0
+  poolSize: 10
+  minIdleConns: 5
+  maxConnAge: "30m"
+  poolTimeout: "30s"
+  idleTimeout: "5m"
+  idleCheckFreq: "1m"

@@ -1,0 +1,160 @@
+# Istio VirtualService
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: ai-self-project-backend-vs
+  labels:
+    app: ai-self-project-backend
+spec:
+  hosts:
+  - "api.ai-self-project.com"
+  - "ai-self-project-backend-service"
+  gateways:
+  - ai-self-project-gateway
+  http:
+  - match:
+    - uri:
+        prefix: "/api/v1"
+    route:
+    - destination:
+        host: ai-self-project-backend-service
+        port:
+          number: 80
+        subset: v1
+      weight: 90
+    - destination:
+        host: ai-self-project-backend-service
+        port:
+          number: 80
+        subset: v2
+      weight: 10
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+    timeout: 30s
+    corsPolicy:
+      allowOrigins:
+      - exact: "https://ai-self-project.com"
+      - exact: "https://www.ai-self-project.com"
+      allowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+      allowHeaders:
+      - "Content-Type"
+      - "Authorization"
+      - "X-Request-ID"
+      maxAge: "24h"
+---
+# Istio DestinationRule
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: ai-self-project-backend-dr
+  labels:
+    app: ai-self-project-backend
+spec:
+  host: ai-self-project-backend-service
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30ms
+      http:
+        http1MaxPendingRequests: 1024
+        maxRequestsPerConnection: 10
+        maxRetries: 3
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 10
+  subsets:
+  - name: v1
+    labels:
+      version: v1.0.0
+    trafficPolicy:
+      loadBalancer:
+        simple: ROUND_ROBIN
+  - name: v2
+    labels:
+      version: v1.1.0
+    trafficPolicy:
+      loadBalancer:
+        simple: ROUND_ROBIN
+---
+# Istio Gateway
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: ai-self-project-gateway
+  labels:
+    app: ai-self-project-backend
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "api.ai-self-project.com"
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "api.ai-self-project.com"
+    tls:
+      mode: SIMPLE
+      credentialName: ai-self-project-tls
+---
+# Istio AuthorizationPolicy
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: ai-self-project-backend-auth
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: ai-self-project-backend
+  rules:
+  - from:
+    - source:
+        principals: ["cluster.local/ns/default/sa/ai-self-project-frontend"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/api/v1/health", "/api/v1/metrics"]
+  - from:
+    - source:
+        namespaces: ["monitoring"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/api/v1/metrics"]
+  - from:
+    - source:
+        requestPrincipals: ["*"]
+    to:
+    - operation:
+        methods: ["POST"]
+        paths: ["/api/v1/users/login", "/api/v1/users/register"]
+  - from:
+    - source:
+        requestPrincipals: ["*"]
+    when:
+    - key: request.auth.claims[role]
+      values: ["user", "admin"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE"]
+        paths: ["/api/v1/*"]

@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-self-project-backend-service
+  labels:
+    app: ai-self-project-backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: ai-self-project-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-self-project-backend-headless
+  labels:
+    app: ai-self-project-backend
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: ai-self-project-backend

@@ -1,0 +1,23 @@
+apiVersion: v2
+name: ai-self-project-backend
+description: A Helm chart for AI Self Project Backend
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - go
+  - gin
+  - web
+  - api
+  - backend
+home: https://github.com/your-org/ai-self-project
+sources:
+  - https://github.com/your-org/ai-self-project
+maintainers:
+  - name: Your Name
+    email: your.email@example.com
+engine: gotpl
+kubeVersion: ">=1.19.0-0"
+annotations:
+  category: Application
+  licenses: MIT

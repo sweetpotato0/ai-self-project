@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通知组件测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e4e7ed;
+            border-radius: 8px;
+        }
+        .test-title {
+            color: #409eff;
+            margin-bottom: 15px;
+        }
+        .test-button {
+            background: #409eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #337ecc;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #f0f9ff;
+            color: #409eff;
+            border: 1px solid #409eff;
+        }
+        .status.error {
+            background: #fef0f0;
+            color: #f56c6c;
+            border: 1px solid #f56c6c;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔔 TaskMaster 通知组件测试</h1>
+
+        <div class="test-section">
+            <h2 class="test-title">1. 前端服务状态检查</h2>
+            <button class="test-button" onclick="checkFrontend()">检查前端服务</button>
+            <div id="frontend-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">2. 后端服务状态检查</h2>
+            <button class="test-button" onclick="checkBackend()">检查后端服务</button>
+            <div id="backend-status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">3. 通知组件功能测试</h2>
+            <p>请按照以下步骤测试通知组件：</p>
+            <ol>
+                <li>打开浏览器访问：<a href="http://localhost:3001" target="_blank">http://localhost:3001</a></li>
+                <li>使用测试账号登录：
+                    <ul>
+                        <li>用户名： testuser2</li>
+                        <li>密码： 123456</li>
+                    </ul>
+                </li>
+                <li>登录后，在右上角找到铃铛图标 🔔</li>
+                <li>点击铃铛图标，应该会显示通知面板</li>
+                <li>检查是否显示未读消息数量</li>
+                <li>测试标记已读和删除通知功能</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">4. 常见问题排查</h2>
+            <button class="test-button" onclick="runDiagnostics()">运行诊断</button>
+            <div id="diagnostics-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2 class="test-title">5. 访问地址</h2>
+            <ul>
+                <li><strong>前端应用</strong>: <a href="http://localhost:3001" target="_blank">http://localhost:3001</a></li>
+                <li><strong>后端API</strong>: <a href="http://localhost:8080/api/v1/health" target="_blank">http://localhost:8080/api/v1/health</a></li>
+                <li><strong>健康检查</strong>: <a href="http://localhost:8080/api/v1/health" target="_blank">http://localhost:8080/api/v1/health</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function checkFrontend() {
+            const statusDiv = document.getElementById('frontend-status');
+            statusDiv.innerHTML = '<div class="status">检查中...</div>';
+
+            try {
+                const response = await fetch('http://localhost:3001');
+                if (response.ok) {
+                    statusDiv.innerHTML = '<div class="status success">✅ 前端服务正常运行 (http://localhost:3001)</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ 前端服务响应异常</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="status error">❌ 前端服务无法访问: ' + error.message + '</div>';
+            }
+        }
+
+        async function checkBackend() {
+            const statusDiv = document.getElementById('backend-status');
+            statusDiv.innerHTML = '<div class="status">检查中...</div>';
+
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/health');
+                const data = await response.json();
+
+                if (response.ok && data.code === 200) {
+                    statusDiv.innerHTML = '<div class="status success">✅ 后端服务正常运行 (http://localhost:8080)</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ 后端服务响应异常</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="status error">❌ 后端服务无法访问: ' + error.message + '</div>';
+            }
+        }
+
+        async function runDiagnostics() {
+            const resultDiv = document.getElementById('diagnostics-result');
+            resultDiv.innerHTML = '<div class="status">运行诊断中...</div>';
+
+            let diagnostics = [];
+
+            // 检查前端
+            try {
+                const frontendResponse = await fetch('http://localhost:3001');
+                diagnostics.push('✅ 前端服务可访问');
+            } catch (error) {
+                diagnostics.push('❌ 前端服务不可访问');
+            }
+
+            // 检查后端
+            try {
+                const backendResponse = await fetch('http://localhost:8080/api/v1/health');
+                const backendData = await backendResponse.json();
+                if (backendData.code === 200) {
+                    diagnostics.push('✅ 后端服务正常');
+                } else {
+                    diagnostics.push('❌ 后端服务异常');
+                }
+            } catch (error) {
+                diagnostics.push('❌ 后端服务不可访问');
+            }
+
+            // 检查端口
+            try {
+                const portResponse = await fetch('http://localhost:3001', { method: 'HEAD' });
+                diagnostics.push('✅ 端口3001正常');
+            } catch (error) {
+                diagnostics.push('❌ 端口3001异常');
+            }
+
+            resultDiv.innerHTML = '<div class="status success">诊断结果：<br>' + diagnostics.join('<br>') + '</div>';
+        }
+
+        // 页面加载时自动检查
+        window.onload = function() {
+            checkFrontend();
+            checkBackend();
+        };
+    </script>
+</body>
+</html>

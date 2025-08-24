@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket 连接测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .connecting { background: #fff3cd; color: #856404; }
+        .messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+        .message { margin: 5px 0; padding: 5px; background: #f8f9fa; border-radius: 3px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket 连接测试</h1>
+
+    <div id="status" class="status disconnected">未连接</div>
+
+    <div>
+        <button onclick="connect()">连接</button>
+        <button onclick="disconnect()">断开</button>
+        <button onclick="sendPing()">发送 Ping</button>
+        <button onclick="getNotifications()">获取通知</button>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <script>
+        let ws = null;
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+
+        function addMessage(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateStatus(status, className) {
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addMessage('已经连接了');
+                return;
+            }
+
+            // 使用测试token
+            const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0LCJ1c2VybmFtZSI6ImFkbWluIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlzcyI6Imdpbi13ZWItZnJhbWV3b3JrIiwiZXhwIjoxNzU2MDQ0Nzg0LCJuYmYiOjE3NTU5NTgzODQsImlhdCI6MTc1NTk1ODM4NH0.S16wdafD8aHShXcAoXLN4Of16NNqJrKL6f_sPSBM3zs';
+            const wsUrl = `ws://localhost:8080/api/v1/ws?token=${token}`;
+
+            updateStatus('正在连接...', 'connecting');
+            addMessage('正在连接到: ' + wsUrl);
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    updateStatus('已连接', 'connected');
+                    addMessage('WebSocket 连接成功！');
+                };
+
+                ws.onmessage = function(event) {
+                    addMessage('收到消息: ' + event.data);
+                    try {
+                        const data = JSON.parse(event.data);
+                        addMessage('解析后的数据: ' + JSON.stringify(data, null, 2));
+                    } catch (e) {
+                        addMessage('无法解析JSON: ' + e.message);
+                    }
+                };
+
+                ws.onclose = function() {
+                    updateStatus('已断开', 'disconnected');
+                    addMessage('WebSocket 连接已断开');
+                };
+
+                ws.onerror = function(error) {
+                    updateStatus('连接错误', 'disconnected');
+                    addMessage('WebSocket 错误: ' + error);
+                };
+
+            } catch (error) {
+                updateStatus('连接失败', 'disconnected');
+                addMessage('创建 WebSocket 失败: ' + error.message);
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendPing() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const pingMsg = { type: 'ping' };
+                ws.send(JSON.stringify(pingMsg));
+                addMessage('发送 Ping: ' + JSON.stringify(pingMsg));
+            } else {
+                addMessage('WebSocket 未连接');
+            }
+        }
+
+        function getNotifications() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const msg = { type: 'get_notifications' };
+                ws.send(JSON.stringify(msg));
+                addMessage('请求通知: ' + JSON.stringify(msg));
+            } else {
+                addMessage('WebSocket 未连接');
+            }
+        }
+
+        // 页面加载时自动连接
+        window.onload = function() {
+            addMessage('页面加载完成，点击"连接"按钮开始测试');
+        };
+    </script>
+</body>
+</html>
