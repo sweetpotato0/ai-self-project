@@ -62,6 +62,31 @@ const routes = [
         path: 'notifications',
         name: 'notifications',
         component: () => import('@/views/Notifications.vue')
+      },
+      {
+        path: 'tools',
+        name: 'tools',
+        component: () => import('@/views/Tools.vue')
+      },
+      {
+        path: 'tools/development',
+        name: 'tools-development',
+        component: () => import('@/views/ToolsDevelopment.vue')
+      },
+      {
+        path: 'tools/timestamp-converter',
+        name: 'tools-timestamp-converter',
+        component: () => import('@/views/TimestampConverter.vue')
+      },
+      {
+        path: 'tools/json-tools',
+        name: 'tools-json-tools',
+        component: () => import('@/views/JsonToolsSimple.vue')
+      },
+      {
+        path: 'tools/string-generator',
+        name: 'tools-string-generator',
+        component: () => import('@/views/StringGenerator.vue')
       }
     ]
   },

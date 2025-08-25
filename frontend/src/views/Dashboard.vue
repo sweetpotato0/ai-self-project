@@ -62,6 +62,12 @@
             </el-menu-item>
           </el-tooltip>
 
+          <el-tooltip content="工具箱" placement="right">
+            <el-menu-item index="tools" @click="navigateTo('tools')">
+              <el-icon><Tools /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
+
           <el-tooltip content="系统设置" placement="right">
             <el-menu-item index="settings" @click="navigateTo('settings')">
               <el-icon><Setting /></el-icon>
@@ -93,6 +99,11 @@
           <el-menu-item index="articles" @click="navigateTo('articles')">
             <el-icon><Document /></el-icon>
             <span>个人文章</span>
+          </el-menu-item>
+
+          <el-menu-item index="tools" @click="navigateTo('tools')">
+            <el-icon><Tools /></el-icon>
+            <span>工具箱</span>
           </el-menu-item>
 
           <el-menu-item index="settings" @click="navigateTo('settings')">
@@ -191,7 +202,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import {
   Grid, Fold, Expand, DataBoard, List, Calendar,
-  TrendCharts, Setting, User, SwitchButton, Document
+  TrendCharts, Setting, User, SwitchButton, Document, Tools
 } from '@element-plus/icons-vue'
 import NotificationPanel from '@/components/NotificationPanel.vue'
 import WebSocketNotification from '@/components/WebSocketNotification.vue'
@@ -212,6 +223,11 @@ const pageTitle = computed(() => {
     calendar: '日程安排',
     analytics: '数据分析',
     articles: '个人文章',
+    tools: '工具箱',
+    'tools-development': '开发工具',
+    'tools-timestamp-converter': '时间戳转换',
+    'tools-json-tools': 'JSON工具',
+    'tools-string-generator': '字符串生成',
     settings: '系统设置',
     profile: '个人资料'
   }
