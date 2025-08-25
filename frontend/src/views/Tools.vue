@@ -81,7 +81,7 @@ const toolCategories = reactive([
     name: '开发类',
     description: '开发工具、代码格式化、API测试等工具',
     icon: Monitor,
-    toolCount: 3,
+    toolCount: 4,
     route: 'tools-development'
   },
   {

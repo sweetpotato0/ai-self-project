@@ -87,6 +87,11 @@ const routes = [
         path: 'tools/string-generator',
         name: 'tools-string-generator',
         component: () => import('@/views/StringGenerator.vue')
+      },
+      {
+        path: 'tools/http-status-codes',
+        name: 'tools-http-status-codes',
+        component: () => import('@/views/HttpStatusCodes.vue')
       }
     ]
   },

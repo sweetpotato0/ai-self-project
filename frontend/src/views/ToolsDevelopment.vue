@@ -53,6 +53,7 @@ import {
   Timer,
   Document,
   Key,
+  Connection,
   ArrowRight
 } from '@element-plus/icons-vue'
 
@@ -82,6 +83,14 @@ const developmentTools = reactive([
     icon: Key,
     tags: ['密码', '随机', '字符串', 'API密钥'],
     route: 'tools-string-generator'
+  },
+  {
+    id: 'http-status-codes',
+    name: 'HTTP状态码',
+    description: 'HTTP状态码查询工具，包含详细说明和使用场景',
+    icon: Connection,
+    tags: ['HTTP', '状态码', 'API', '网络'],
+    route: 'tools-http-status-codes'
   }
 ])
 

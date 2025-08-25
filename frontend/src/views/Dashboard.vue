@@ -228,6 +228,7 @@ const pageTitle = computed(() => {
     'tools-timestamp-converter': '时间戳转换',
     'tools-json-tools': 'JSON工具',
     'tools-string-generator': '字符串生成',
+    'tools-http-status-codes': 'HTTP状态码',
     settings: '系统设置',
     profile: '个人资料'
   }
