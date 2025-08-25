@@ -35,6 +35,30 @@ make dev
 go run cmd/cli/main.go serve
 ```
 
+### 前端应用
+
+```bash
+cd frontend
+
+# 安装依赖
+npm install
+
+# 运行开发服务器
+npm run dev
+
+# 构建生产版本
+npm run build
+
+# 运行测试
+npm run test
+
+# 代码检查
+npm run lint
+
+# 类型检查
+npm run type-check
+```
+
 ### 可用命令
 
 ```bash
@@ -69,6 +93,16 @@ make lint
 - **测试**: testify + httptest
 - **容器**: Docker
 
+### 前端
+- **框架**: Vue 3 + Composition API
+- **构建工具**: Vite
+- **UI组件库**: Element Plus
+- **路由**: Vue Router 4
+- **状态管理**: Pinia
+- **开发语言**: JavaScript/TypeScript
+- **样式**: CSS3 + 响应式设计
+- **工具库**: Day.js, js-yaml
+
 ### 架构特性
 - ✅ 依赖注入容器
 - ✅ 分层架构设计
@@ -82,23 +116,66 @@ make lint
 ## 📚 文档
 
 - [后端架构文档](backend/README.md)
+- [前端开发指南](frontend/README.md)
 - [API文档](backend/docs/)
 - [CLI使用指南](backend/docs/cli-usage.md)
 - [部署指南](docs/deployment.md)
 
 ## 🔧 开发工具
 
-### 自动化脚本
+### 后端自动化脚本
 - `make build` - 构建应用
-- `make test` - 运行测试
+- `make test` - 运行测试  
 - `make dev` - 开发模式
 - `make prod` - 生产模式
 
+### 前端开发工具
+- `npm run dev` - 开发服务器
+- `npm run build` - 构建生产版本
+- `npm run preview` - 预览构建结果
+- `npm run lint` - 代码检查
+- `npm run type-check` - 类型检查
+
 ### 代码质量
-- 代码格式化: `go fmt`
-- 代码检查: `go vet`
-- 测试覆盖率: `go test -cover`
-- 性能测试: `go test -bench`
+- **后端**: `go fmt`, `go vet`, `go test -cover`
+- **前端**: ESLint, Prettier, TypeScript检查
+
+## 🛠️ 工具箱系统
+
+前端应用内置了一个完整的开发工具箱，提供多种实用工具：
+
+### 开发类工具
+- **时间戳转换器**
+  - 实时时间戳显示
+  - 时间戳与日期互转
+  - 支持多种时间格式
+  - 编程语言代码示例 (JavaScript, Python, Java, Go, Rust)
+  
+- **JSON工具**
+  - JSON格式化和压缩
+  - JSON转YAML
+  - 语法验证和错误提示
+  - 预设示例模板
+  
+- **字符串生成器**
+  - 可配置长度和字符集
+  - 密码、API密钥、会话ID生成
+  - 批量生成功能
+  - 排除易混淆字符选项
+  
+- **HTTP状态码查询**
+  - 涵盖59个常用状态码 (1xx-5xx)
+  - 详细的中文说明和使用场景
+  - 按类别分组展示
+  - 搜索和过滤功能
+  - 相关HTTP响应头信息
+
+### 计划功能
+- **文本类**: 编码转换、文本处理、正则测试
+- **图像类**: 图片压缩、格式转换、在线编辑
+- **运维类**: 服务器监控、网络工具、系统管理
+- **学术类**: 论文工具、数学计算、格式转换
+- **查询类**: IP查询、域名查询、whois查询
 
 ## 🐳 Docker支持
 
@@ -120,8 +197,19 @@ docker-compose up -d
 - ✅ 文档系统 (100%)
 - ✅ 部署配置 (100%)
 
-### 前端状态
-- 🔄 待更新
+### 前端完成度
+- ✅ 核心架构 (100%)
+- ✅ 用户认证系统 (100%)
+- ✅ 仪表盘界面 (100%)
+- ✅ 响应式布局 (100%)
+- ✅ 工具箱系统 (100%)
+  - ✅ 时间戳转换工具
+  - ✅ JSON工具 (格式化/压缩/转YAML)
+  - ✅ 字符串生成工具
+  - ✅ HTTP状态码查询工具
+- ✅ TODO管理系统 (100%)
+- ✅ 个人资料管理 (100%)
+- ✅ 系统设置 (100%)
 
 ## 🤝 贡献指南
 
