@@ -57,7 +57,7 @@ const toolCategories = reactive([
     name: '文本类',
     description: '文本处理、格式转换、编码解码等工具',
     icon: Document,
-    toolCount: 0,
+    toolCount: 3,
     route: 'tools-text'
   },
   {
@@ -73,7 +73,7 @@ const toolCategories = reactive([
     name: '图像类',
     description: '图片压缩、格式转换、编辑处理等工具',
     icon: Picture,
-    toolCount: 0,
+    toolCount: 3,
     route: 'tools-image'
   },
   {
@@ -89,7 +89,7 @@ const toolCategories = reactive([
     name: '运维类',
     description: '服务器监控、网络工具、系统管理等工具',
     icon: Connection,
-    toolCount: 0,
+    toolCount: 3,
     route: 'tools-operations'
   },
   {
@@ -97,7 +97,7 @@ const toolCategories = reactive([
     name: '学术类',
     description: '论文工具、数学计算、学术格式等工具',
     icon: Reading,
-    toolCount: 0,
+    toolCount: 3,
     route: 'tools-academic'
   },
   {
@@ -105,7 +105,7 @@ const toolCategories = reactive([
     name: '查询类',
     description: 'IP查询、域名查询、whois等查询工具',
     icon: Search,
-    toolCount: 0,
+    toolCount: 3,
     route: 'tools-query'
   },
   {
@@ -113,7 +113,7 @@ const toolCategories = reactive([
     name: '其它',
     description: '其他实用工具和小功能',
     icon: MoreFilled,
-    toolCount: 0,
+    toolCount: 5,
     route: 'tools-others'
   }
 ])
@@ -125,7 +125,10 @@ const navigateToCategory = (category) => {
 
 <style scoped>
 .tools-container {
-  padding: 20px 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .tools-header {
@@ -151,7 +154,8 @@ const navigateToCategory = (category) => {
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 24px;
   max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  justify-content: center;
 }
 
 .category-card {

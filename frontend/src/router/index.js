@@ -92,6 +92,112 @@ const routes = [
         path: 'tools/http-status-codes',
         name: 'tools-http-status-codes',
         component: () => import('@/views/HttpStatusCodes.vue')
+      },
+      {
+        path: 'tools/text',
+        name: 'tools-text',
+        component: () => import('@/views/ToolsText.vue')
+      },
+      {
+        path: 'tools/base64-encoder',
+        name: 'tools-base64-encoder',
+        component: () => import('@/views/Base64Encoder.vue')
+      },
+      {
+        path: 'tools/url-encoder',
+        name: 'tools-url-encoder',
+        component: () => import('@/views/UrlEncoder.vue')
+      },
+      {
+        path: 'tools/text-processor',
+        name: 'tools-text-processor',
+        component: () => import('@/views/TextProcessor.vue')
+      },
+      {
+        path: 'tools/image',
+        name: 'tools-image',
+        component: () => import('@/views/ToolsImage.vue')
+      },
+      {
+        path: 'tools/image-compressor',
+        name: 'tools-image-compressor',
+        component: () => import('@/views/ImageCompressor.vue')
+      },
+      {
+        path: 'tools/image-converter',
+        name: 'tools-image-converter',
+        component: () => import('@/views/ImageConverter.vue')
+      },
+      {
+        path: 'tools/image-resizer',
+        name: 'tools-image-resizer',
+        component: () => import('@/views/ImageResizer.vue')
+      },
+      {
+        path: 'tools/operations',
+        name: 'tools-operations',
+        component: () => import('@/views/ToolsOperations.vue')
+      },
+      {
+        path: 'tools/academic',
+        name: 'tools-academic',
+        component: () => import('@/views/ToolsAcademic.vue')
+      },
+      {
+        path: 'tools/query',
+        name: 'tools-query',
+        component: () => import('@/views/ToolsQuery.vue')
+      },
+      {
+        path: 'tools/document',
+        name: 'tools-document',
+        component: () => import('@/views/ToolsDocument.vue')
+      },
+      {
+        path: 'tools/others',
+        name: 'tools-others',
+        component: () => import('@/views/ToolsOthers.vue')
+      },
+      {
+        path: 'tools/citation-generator',
+        name: 'tools-citation-generator',
+        component: () => import('@/views/CitationGenerator.vue')
+      },
+      {
+        path: 'tools/math-calculator',
+        name: 'tools-math-calculator',
+        component: () => import('@/views/MathCalculator.vue')
+      },
+      {
+        path: 'tools/ping-tool',
+        name: 'tools-ping-tool',
+        component: () => import('@/views/PingTool.vue')
+      },
+      // 其他工具
+      {
+        path: 'tools/qr-code-generator',
+        name: 'tools-qr-code-generator',
+        component: () => import('@/views/QRCodeGenerator.vue')
+      },
+      {
+        path: 'tools/color-picker',
+        name: 'tools-color-picker',
+        component: () => import('@/views/ColorPicker.vue')
+      },
+      {
+        path: 'tools/password-strength-checker',
+        name: 'tools-password-strength-checker',
+        component: () => import('@/views/PasswordStrengthChecker.vue')
+      },
+      {
+        path: 'tools/regex-tester',
+        name: 'tools-regex-tester',
+        component: () => import('@/views/RegexTester.vue')
+      },
+      {
+        path: 'tools/hash-calculator',
+        name: 'tools-hash-calculator',
+        component: () => import('@/views/HashCalculator.vue')
       }
     ]
   },
