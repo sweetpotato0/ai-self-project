@@ -76,22 +76,22 @@ const routes = [
       {
         path: 'tools/timestamp-converter',
         name: 'tools-timestamp-converter',
-        component: () => import('@/views/TimestampConverter.vue')
+        component: () => import('@/views/tools/development/TimestampConverter.vue')
       },
       {
         path: 'tools/json-tools',
         name: 'tools-json-tools',
-        component: () => import('@/views/JsonToolsSimple.vue')
+        component: () => import('@/views/tools/development/JsonToolsSimple.vue')
       },
       {
         path: 'tools/string-generator',
         name: 'tools-string-generator',
-        component: () => import('@/views/StringGenerator.vue')
+        component: () => import('@/views/tools/development/StringGenerator.vue')
       },
       {
         path: 'tools/http-status-codes',
         name: 'tools-http-status-codes',
-        component: () => import('@/views/HttpStatusCodes.vue')
+        component: () => import('@/views/tools/development/HttpStatusCodes.vue')
       },
       {
         path: 'tools/text',
@@ -101,17 +101,17 @@ const routes = [
       {
         path: 'tools/base64-encoder',
         name: 'tools-base64-encoder',
-        component: () => import('@/views/Base64Encoder.vue')
+        component: () => import('@/views/tools/text/Base64Encoder.vue')
       },
       {
         path: 'tools/url-encoder',
         name: 'tools-url-encoder',
-        component: () => import('@/views/UrlEncoder.vue')
+        component: () => import('@/views/tools/text/UrlEncoder.vue')
       },
       {
         path: 'tools/text-processor',
         name: 'tools-text-processor',
-        component: () => import('@/views/TextProcessor.vue')
+        component: () => import('@/views/tools/text/TextProcessor.vue')
       },
       {
         path: 'tools/image',
@@ -121,17 +121,17 @@ const routes = [
       {
         path: 'tools/image-compressor',
         name: 'tools-image-compressor',
-        component: () => import('@/views/ImageCompressor.vue')
+        component: () => import('@/views/tools/image/ImageCompressor.vue')
       },
       {
         path: 'tools/image-converter',
         name: 'tools-image-converter',
-        component: () => import('@/views/ImageConverter.vue')
+        component: () => import('@/views/tools/image/ImageConverter.vue')
       },
       {
         path: 'tools/image-resizer',
         name: 'tools-image-resizer',
-        component: () => import('@/views/ImageResizer.vue')
+        component: () => import('@/views/tools/image/ImageResizer.vue')
       },
       {
         path: 'tools/operations',
@@ -161,59 +161,59 @@ const routes = [
       {
         path: 'tools/citation-generator',
         name: 'tools-citation-generator',
-        component: () => import('@/views/CitationGenerator.vue')
+        component: () => import('@/views/tools/academic/CitationGenerator.vue')
       },
       {
         path: 'tools/math-calculator',
         name: 'tools-math-calculator',
-        component: () => import('@/views/MathCalculator.vue')
+        component: () => import('@/views/tools/academic/MathCalculator.vue')
       },
       {
         path: 'tools/ping-tool',
         name: 'tools-ping-tool',
-        component: () => import('@/views/PingTool.vue')
+        component: () => import('@/views/tools/network/PingTool.vue')
       },
       // 其他工具
       {
         path: 'tools/qr-code-generator',
         name: 'tools-qr-code-generator',
-        component: () => import('@/views/QRCodeGenerator.vue')
+        component: () => import('@/views/tools/others/QRCodeGenerator.vue')
       },
       {
         path: 'tools/color-picker',
         name: 'tools-color-picker',
-        component: () => import('@/views/ColorPicker.vue')
+        component: () => import('@/views/tools/others/ColorPicker.vue')
       },
       {
         path: 'tools/password-strength-checker',
         name: 'tools-password-strength-checker',
-        component: () => import('@/views/PasswordStrengthChecker.vue')
+        component: () => import('@/views/tools/others/PasswordStrengthChecker.vue')
       },
       {
         path: 'tools/regex-tester',
         name: 'tools-regex-tester',
-        component: () => import('@/views/RegexTester.vue')
+        component: () => import('@/views/tools/others/RegexTester.vue')
       },
       {
         path: 'tools/hash-calculator',
         name: 'tools-hash-calculator',
-        component: () => import('@/views/HashCalculator.vue')
+        component: () => import('@/views/tools/others/HashCalculator.vue')
       },
       // 查询类工具
       {
         path: 'tools/ip-lookup',
         name: 'tools-ip-lookup',
-        component: () => import('@/views/IPLookup.vue')
+        component: () => import('@/views/tools/query/IPLookup.vue')
       },
       {
         path: 'tools/whois-lookup',
         name: 'tools-whois-lookup',
-        component: () => import('@/views/WhoisLookup.vue')
+        component: () => import('@/views/tools/query/WhoisLookup.vue')
       },
       {
         path: 'tools/domain-info',
         name: 'tools-domain-info',
-        component: () => import('@/views/DomainInfo.vue')
+        component: () => import('@/views/tools/query/DomainInfo.vue')
       }
     ]
   },
