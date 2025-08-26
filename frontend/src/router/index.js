@@ -1,227 +1,34 @@
-import { useAuthStore } from '@/stores/auth'
 import { createRouter, createWebHistory } from 'vue-router'
+import { setupRouterGuards } from './guards'
+import { authRoutes } from './modules/authRoutes'
+import { dashboardRoutes } from './modules/dashboardRoutes'
+import { toolsRoutes } from './modules/toolsRoutes'
 
 const routes = [
   {
     path: '/',
     redirect: '/dashboard'
   },
-  {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue'),
-    meta: { requiresGuest: true }
-  },
+  // 认证路由
+  ...authRoutes,
+  // 仪表盘主路由
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: () => import('@/views/Dashboard.vue'),
+    component: () => import('@/features/dashboard/views/Dashboard.vue'),
     meta: { requiresAuth: true },
     children: [
-      {
-        path: '',
-        name: 'dashboard',
-        component: () => import('@/views/DashboardHome.vue')
-      },
-      {
-        path: 'todos',
-        name: 'todos',
-        component: () => import('@/views/Todos.vue')
-      },
-      {
-        path: 'calendar',
-        name: 'calendar',
-        component: () => import('@/views/Calendar.vue')
-      },
-      {
-        path: 'analytics',
-        name: 'analytics',
-        component: () => import('@/views/Analytics.vue')
-      },
-      {
-        path: 'settings',
-        name: 'settings',
-        component: () => import('@/views/Settings.vue')
-      },
-      {
-        path: 'profile',
-        name: 'profile',
-        component: () => import('@/views/Profile.vue')
-      },
-      {
-        path: 'articles',
-        name: 'articles',
-        component: () => import('@/views/Articles.vue')
-      },
-      {
-        path: 'articles/:id',
-        name: 'article-detail',
-        component: () => import('@/views/ArticleDetail.vue')
-      },
-      {
-        path: 'notifications',
-        name: 'notifications',
-        component: () => import('@/views/Notifications.vue')
-      },
-      {
-        path: 'tools',
-        name: 'tools',
-        component: () => import('@/views/Tools.vue')
-      },
-      {
-        path: 'tools/development',
-        name: 'tools-development',
-        component: () => import('@/views/ToolsDevelopment.vue')
-      },
-      {
-        path: 'tools/timestamp-converter',
-        name: 'tools-timestamp-converter',
-        component: () => import('@/views/tools/development/TimestampConverter.vue')
-      },
-      {
-        path: 'tools/json-tools',
-        name: 'tools-json-tools',
-        component: () => import('@/views/tools/development/JsonToolsSimple.vue')
-      },
-      {
-        path: 'tools/string-generator',
-        name: 'tools-string-generator',
-        component: () => import('@/views/tools/development/StringGenerator.vue')
-      },
-      {
-        path: 'tools/http-status-codes',
-        name: 'tools-http-status-codes',
-        component: () => import('@/views/tools/development/HttpStatusCodes.vue')
-      },
-      {
-        path: 'tools/text',
-        name: 'tools-text',
-        component: () => import('@/views/ToolsText.vue')
-      },
-      {
-        path: 'tools/base64-encoder',
-        name: 'tools-base64-encoder',
-        component: () => import('@/views/tools/text/Base64Encoder.vue')
-      },
-      {
-        path: 'tools/url-encoder',
-        name: 'tools-url-encoder',
-        component: () => import('@/views/tools/text/UrlEncoder.vue')
-      },
-      {
-        path: 'tools/text-processor',
-        name: 'tools-text-processor',
-        component: () => import('@/views/tools/text/TextProcessor.vue')
-      },
-      {
-        path: 'tools/image',
-        name: 'tools-image',
-        component: () => import('@/views/ToolsImage.vue')
-      },
-      {
-        path: 'tools/image-compressor',
-        name: 'tools-image-compressor',
-        component: () => import('@/views/tools/image/ImageCompressor.vue')
-      },
-      {
-        path: 'tools/image-converter',
-        name: 'tools-image-converter',
-        component: () => import('@/views/tools/image/ImageConverter.vue')
-      },
-      {
-        path: 'tools/image-resizer',
-        name: 'tools-image-resizer',
-        component: () => import('@/views/tools/image/ImageResizer.vue')
-      },
-      {
-        path: 'tools/operations',
-        name: 'tools-operations',
-        component: () => import('@/views/ToolsOperations.vue')
-      },
-      {
-        path: 'tools/academic',
-        name: 'tools-academic',
-        component: () => import('@/views/ToolsAcademic.vue')
-      },
-      {
-        path: 'tools/query',
-        name: 'tools-query',
-        component: () => import('@/views/ToolsQuery.vue')
-      },
-      {
-        path: 'tools/document',
-        name: 'tools-document',
-        component: () => import('@/views/ToolsDocument.vue')
-      },
-      {
-        path: 'tools/others',
-        name: 'tools-others',
-        component: () => import('@/views/ToolsOthers.vue')
-      },
-      {
-        path: 'tools/citation-generator',
-        name: 'tools-citation-generator',
-        component: () => import('@/views/tools/academic/CitationGenerator.vue')
-      },
-      {
-        path: 'tools/math-calculator',
-        name: 'tools-math-calculator',
-        component: () => import('@/views/tools/academic/MathCalculator.vue')
-      },
-      {
-        path: 'tools/ping-tool',
-        name: 'tools-ping-tool',
-        component: () => import('@/views/tools/network/PingTool.vue')
-      },
-      // 其他工具
-      {
-        path: 'tools/qr-code-generator',
-        name: 'tools-qr-code-generator',
-        component: () => import('@/views/tools/others/QRCodeGenerator.vue')
-      },
-      {
-        path: 'tools/color-picker',
-        name: 'tools-color-picker',
-        component: () => import('@/views/tools/others/ColorPicker.vue')
-      },
-      {
-        path: 'tools/password-strength-checker',
-        name: 'tools-password-strength-checker',
-        component: () => import('@/views/tools/others/PasswordStrengthChecker.vue')
-      },
-      {
-        path: 'tools/regex-tester',
-        name: 'tools-regex-tester',
-        component: () => import('@/views/tools/others/RegexTester.vue')
-      },
-      {
-        path: 'tools/hash-calculator',
-        name: 'tools-hash-calculator',
-        component: () => import('@/views/tools/others/HashCalculator.vue')
-      },
-      // 查询类工具
-      {
-        path: 'tools/ip-lookup',
-        name: 'tools-ip-lookup',
-        component: () => import('@/views/tools/query/IPLookup.vue')
-      },
-      {
-        path: 'tools/whois-lookup',
-        name: 'tools-whois-lookup',
-        component: () => import('@/views/tools/query/WhoisLookup.vue')
-      },
-      {
-        path: 'tools/domain-info',
-        name: 'tools-domain-info',
-        component: () => import('@/views/tools/query/DomainInfo.vue')
-      }
+      // 仪表盘子路由
+      ...dashboardRoutes,
+      // 工具路由
+      ...toolsRoutes
     ]
   },
-  // 独立的路由，可以直接访问 /articles/:id
+  // 独立的文章详情路由
   {
     path: '/articles/:id',
     name: 'article-detail-standalone',
-    component: () => import('@/views/ArticleDetail.vue'),
+    component: () => import('@/features/articles/views/ArticleDetail.vue'),
     meta: { requiresAuth: true }
   }
 ]
@@ -231,18 +38,7 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫
-router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore()
-  const isAuthenticated = authStore.isAuthenticated
-
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else if (to.meta.requiresGuest && isAuthenticated) {
-    next('/dashboard')
-  } else {
-    next()
-  }
-})
+// 设置路由守卫
+setupRouterGuards(router)
 
 export default router

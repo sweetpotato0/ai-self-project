@@ -112,7 +112,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bell, Clock, Warning, Check, Document, InfoFilled, User, DataBoard, TrendCharts, Delete } from '@element-plus/icons-vue'
-import { notificationApi } from '@/api/notification'
+import { notificationsApi } from '@/features/notifications/api'
 import { formatRelativeTime, formatDateTime } from '@/utils/dateTime'
 
 const router = useRouter()
@@ -139,7 +139,7 @@ const getNotificationData = (notification, key) => {
 const fetchNotifications = async () => {
   loading.value = true
   try {
-    const response = await notificationApi.getNotifications({
+    const response = await notificationsApi.getNotifications({
       page: currentPage.value,
       limit: pageSize.value
     })
@@ -155,7 +155,7 @@ const fetchNotifications = async () => {
 
 const markAsRead = async (notification) => {
   try {
-    await notificationApi.markAsRead(notification.id)
+    await notificationsApi.markAsRead(notification.id)
     notification.is_read = true
     ElMessage.success('已标记为已读')
   } catch (error) {
@@ -165,7 +165,7 @@ const markAsRead = async (notification) => {
 
 const markAllAsRead = async () => {
   try {
-    await notificationApi.markAllAsRead()
+    await notificationsApi.markAllAsRead()
     notifications.value.forEach(n => n.is_read = true)
     ElMessage.success('已全部标记为已读')
   } catch (error) {
@@ -181,7 +181,7 @@ const deleteNotification = async (notification) => {
       type: 'warning'
     })
 
-    await notificationApi.deleteNotification(notification.id)
+    await notificationsApi.deleteNotification(notification.id)
     const index = notifications.value.findIndex(n => n.id === notification.id)
     if (index > -1) {
       notifications.value.splice(index, 1)

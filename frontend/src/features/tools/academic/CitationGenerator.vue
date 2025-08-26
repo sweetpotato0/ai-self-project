@@ -61,7 +61,7 @@
             </div>
             <div class="generate-section">
               <el-button @click="generateCitations" type="primary" size="large">
-                <el-icon><Magic /></el-icon>
+                <el-icon><MagicStick /></el-icon>
                 生成引用
               </el-button>
               <el-button @click="clearForm" type="default" size="large">
@@ -135,7 +135,7 @@ import { ElMessage } from 'element-plus'
 import {
   Document,
   EditPen,
-  Magic,
+  MagicStick,
   RefreshLeft,
   Collection,
   DocumentCopy,

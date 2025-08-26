@@ -204,8 +204,8 @@ import {
   Grid, Fold, Expand, DataBoard, List, Calendar,
   TrendCharts, Setting, User, SwitchButton, Document, Tools
 } from '@element-plus/icons-vue'
-import NotificationPanel from '@/components/NotificationPanel.vue'
-import WebSocketNotification from '@/components/WebSocketNotification.vue'
+import NotificationPanel from '@/components/notification/NotificationPanel.vue'
+import WebSocketNotification from '@/components/notification/WebSocketNotification.vue'
 
 const router = useRouter()
 const route = useRoute()

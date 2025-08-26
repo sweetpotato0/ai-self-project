@@ -84,7 +84,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useArticleStore } from '@/stores/article'
 import { ElMessage } from 'element-plus'
-import EnhancedEditor from './EnhancedEditor.vue'
+import EnhancedEditor from '@/components/editor/EnhancedEditor.vue'
 
 const props = defineProps({
   modelValue: {

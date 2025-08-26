@@ -140,7 +140,7 @@ import { useArticleStore } from '@/stores/article'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, View, Star, User, Edit, Share, Loading } from '@element-plus/icons-vue'
-import ArticleDialog from '@/components/ArticleDialog.vue'
+import ArticleDialog from '@/components/article/ArticleDialog.vue'
 import MarkdownIt from 'markdown-it'
 
 const route = useRoute()

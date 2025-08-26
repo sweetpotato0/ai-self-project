@@ -1,4 +1,4 @@
-import { todoApi } from '@/api/todo'
+import { todosApi } from '@/features/todos/api'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
@@ -12,7 +12,7 @@ export const useTodoStore = defineStore('todo', () => {
   const fetchTodos = async () => {
     loading.value = true
     try {
-      const response = await todoApi.getTodos()
+      const response = await todosApi.getTodos()
       todos.value = response.data.todos || []
       
       // 检查任务到期情况并发送通知
@@ -27,7 +27,7 @@ export const useTodoStore = defineStore('todo', () => {
   // 创建TODO
   const createTodo = async (todoData) => {
     try {
-      const response = await todoApi.createTodo(todoData)
+      const response = await todosApi.createTodo(todoData)
       const newTodo = response.data.todo
       todos.value.unshift(newTodo)
       
@@ -45,7 +45,7 @@ export const useTodoStore = defineStore('todo', () => {
   // 更新TODO
   const updateTodo = async (id, todoData) => {
     try {
-      const response = await todoApi.updateTodo(id, todoData)
+      const response = await todosApi.updateTodo(id, todoData)
       const updatedTodo = response.data.todo
       const index = todos.value.findIndex(todo => todo.id === id)
       const oldTodo = index !== -1 ? todos.value[index] : null
@@ -70,7 +70,7 @@ export const useTodoStore = defineStore('todo', () => {
   // 删除TODO
   const deleteTodo = async (id) => {
     try {
-      await todoApi.deleteTodo(id)
+      await todosApi.deleteTodo(id)
       const index = todos.value.findIndex(todo => todo.id === id)
       if (index !== -1) {
         todos.value.splice(index, 1)

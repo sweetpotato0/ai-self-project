@@ -170,7 +170,7 @@ import { useRouter } from 'vue-router'
 import { useArticleStore } from '@/stores/article'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Document, Check, Edit, View, Star, Search, Loading } from '@element-plus/icons-vue'
-import ArticleDialog from '@/components/ArticleDialog.vue'
+import ArticleDialog from '@/components/article/ArticleDialog.vue'
 
 const router = useRouter()
 

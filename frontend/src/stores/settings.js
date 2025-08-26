@@ -1,14 +1,6 @@
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
-import {
-  getSettings,
-  updateProfile,
-  changePassword,
-  updateNotificationSettings,
-  updateInterfaceSettings,
-  exportData,
-  clearCompletedTasks
-} from '@/api/settings'
+import { settingsApi } from '@/features/settings/api'
 import { notificationManager } from '@/utils/notificationManager'
 import { localeManager } from '@/utils/localeManager'
 
@@ -39,7 +31,7 @@ export const useSettingsStore = defineStore('settings', {
       
       this.loading = true
       try {
-        const response = await getSettings()
+        const response = await settingsApi.getSettings()
         if (response.data) {
           this.settings = response.data
         }
@@ -58,7 +50,7 @@ export const useSettingsStore = defineStore('settings', {
     async updateUserProfile(profileData) {
       this.loading = true
       try {
-        await updateProfile(profileData)
+        await settingsApi.updateProfile(profileData)
         
         // 更新本地用户信息
         const { useAuthStore } = await import('./auth')
@@ -87,7 +79,7 @@ export const useSettingsStore = defineStore('settings', {
     async changeUserPassword(passwordData) {
       this.loading = true
       try {
-        await changePassword(passwordData)
+        await settingsApi.changePassword(passwordData)
         ElMessage.success('密码修改成功')
         return true
       } catch (error) {
@@ -103,7 +95,7 @@ export const useSettingsStore = defineStore('settings', {
     async saveNotificationSettings(notificationData) {
       this.loading = true
       try {
-        await updateNotificationSettings(notificationData)
+        await settingsApi.updateNotificationSettings(notificationData)
         this.settings = { ...this.settings, ...notificationData }
         
         // 更新通知管理器的设置
@@ -124,7 +116,7 @@ export const useSettingsStore = defineStore('settings', {
     async saveInterfaceSettings(interfaceData) {
       this.loading = true
       try {
-        await updateInterfaceSettings(interfaceData)
+        await settingsApi.updateInterfaceSettings(interfaceData)
         this.settings = { ...this.settings, ...interfaceData }
         
         // 应用主题设置
@@ -157,7 +149,7 @@ export const useSettingsStore = defineStore('settings', {
     async exportUserData() {
       this.loading = true
       try {
-        const response = await exportData()
+        const response = await settingsApi.exportData()
         
         // 创建下载链接
         const blob = new Blob([response.data], { type: 'application/json' })
@@ -185,7 +177,7 @@ export const useSettingsStore = defineStore('settings', {
     async clearCompleted() {
       this.loading = true
       try {
-        await clearCompletedTasks()
+        await settingsApi.cleanupData()
         ElMessage.success('已完成任务清理成功')
         return true
       } catch (error) {

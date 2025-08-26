@@ -82,7 +82,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Bell, Clock, Warning, Check, InfoFilled, Delete } from '@element-plus/icons-vue'
-import { notificationApi } from '@/api/notification'
+import { notificationsApi } from '@/features/notifications/api'
 import { formatRelativeTime } from '@/utils/dateTime'
 
 const router = useRouter()
@@ -101,7 +101,7 @@ const formatTime = formatRelativeTime
 
 const markAsRead = async (notification) => {
   try {
-    await notificationApi.markAsRead(notification.id)
+    await notificationsApi.markAsRead(notification.id)
     notification.is_read = true
     ElMessage.success('已标记为已读')
   } catch (error) {
@@ -111,7 +111,7 @@ const markAsRead = async (notification) => {
 
 const markAllAsRead = async () => {
   try {
-    await notificationApi.markAllAsRead()
+    await notificationsApi.markAllAsRead()
     notifications.value.forEach(n => n.is_read = true)
     ElMessage.success('已全部标记为已读')
   } catch (error) {
@@ -121,7 +121,7 @@ const markAllAsRead = async () => {
 
 const deleteNotification = async (notification) => {
   try {
-    await notificationApi.deleteNotification(notification.id)
+    await notificationsApi.deleteNotification(notification.id)
     const index = notifications.value.findIndex(n => n.id === notification.id)
     if (index > -1) {
       notifications.value.splice(index, 1)
@@ -165,7 +165,7 @@ const handleClick = () => {
 const fetchNotifications = async () => {
   loading.value = true
   try {
-    const response = await notificationApi.getNotifications({ limit: 20 })
+    const response = await notificationsApi.getNotifications({ limit: 20 })
     notifications.value = response.data.notifications || []
   } catch (error) {
     console.error('Failed to fetch notifications:', error)

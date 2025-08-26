@@ -1,4 +1,4 @@
-import { authApi } from '@/api/auth'
+import { authApi } from '@/features/auth/api'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'

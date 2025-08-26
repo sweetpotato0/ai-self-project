@@ -1,4 +1,6 @@
-import { statisticsApi } from '@/api/statistics'
+import { analyticsApi } from '@/features/analytics/api'
+import { todosApi } from '@/features/todos/api'
+import { articlesApi } from '@/features/articles/api'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
@@ -37,14 +39,18 @@ export const useStatisticsStore = defineStore('statistics', () => {
   const fetchStatistics = async (types = ['todo', 'article']) => {
     loading.value = true
     try {
-      const promises = types.map(type =>
-        statisticsApi.getStatistics({ type })
-      )
+      const promises = []
+      
+      if (types.includes('todo')) {
+        promises.push(todosApi.getStats().then(result => ({ type: 'todo', result })))
+      }
+      if (types.includes('article')) {
+        promises.push(articlesApi.getStats().then(result => ({ type: 'article', result })))
+      }
 
       const results = await Promise.all(promises)
 
-      results.forEach((result, index) => {
-        const type = types[index]
+      results.forEach(({ type, result }) => {
         if (result.code === 200) {
           if (type === 'todo') {
             todoStats.value = result.data
@@ -63,7 +69,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchTodoStats = async () => {
     try {
-      const response = await statisticsApi.getTodoStats()
+      const response = await todosApi.getStats()
       if (response.code === 200) {
         todoStats.value = response.data
       }
@@ -75,7 +81,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchArticleStats = async () => {
     try {
-      const response = await statisticsApi.getArticleStats()
+      const response = await articlesApi.getStats()
       if (response.code === 200) {
         articleStats.value = response.data
       }
@@ -87,7 +93,15 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchTrends = async (type, params = {}) => {
     try {
-      const response = await statisticsApi.getTrends({ type, ...params })
+      let response
+      if (type === 'todo') {
+        response = await analyticsApi.getTrends({ metric: 'tasks', ...params })
+      } else if (type === 'article') {
+        response = await analyticsApi.getTrends({ metric: 'articles', ...params })
+      } else {
+        response = await analyticsApi.getTrends({ metric: type, ...params })
+      }
+      
       if (response.code === 200) {
         if (type === 'todo') {
           todoTrends.value = response.data
@@ -103,7 +117,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchTodoTrends = async (params = {}) => {
     try {
-      const response = await statisticsApi.getTodoTrends(params)
+      const response = await analyticsApi.getTrends({ metric: 'tasks', ...params })
       if (response.code === 200) {
         todoTrends.value = response.data
       }
@@ -115,7 +129,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchArticleTrends = async (params = {}) => {
     try {
-      const response = await statisticsApi.getArticleTrends(params)
+      const response = await analyticsApi.getTrends({ metric: 'articles', ...params })
       if (response.code === 200) {
         articleTrends.value = response.data
       }

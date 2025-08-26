@@ -1,4 +1,4 @@
-import { notificationApi } from '@/api/notification'
+import { notificationsApi } from '@/features/notifications/api'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -21,7 +21,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const fetchNotifications = async (params = {}) => {
     loading.value = true
     try {
-      const response = await notificationApi.getNotifications(params)
+      const response = await notificationsApi.getNotifications(params)
       notifications.value = response.data.notifications || []
       unreadCount.value = unreadNotifications.value.length
     } catch (error) {
@@ -52,7 +52,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await notificationApi.markAsRead(notificationId)
+      await notificationsApi.markAsRead(notificationId)
       const notification = notifications.value.find(n => n.id === notificationId)
       if (notification) {
         notification.is_read = true
@@ -66,7 +66,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const markAllAsRead = async () => {
     try {
-      await notificationApi.markAllAsRead()
+      await notificationsApi.markAllAsRead()
       notifications.value.forEach(n => n.is_read = true)
       unreadCount.value = 0
     } catch (error) {
@@ -77,7 +77,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      await notificationApi.deleteNotification(notificationId)
+      await notificationsApi.deleteNotification(notificationId)
       const index = notifications.value.findIndex(n => n.id === notificationId)
       if (index > -1) {
         const notification = notifications.value[index]

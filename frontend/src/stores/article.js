@@ -1,4 +1,4 @@
-import { articleApi } from '@/api/article'
+import { articlesApi } from '@/features/articles/api'
 import { defineStore } from 'pinia'
 
 export const useArticleStore = defineStore('article', {
@@ -42,7 +42,7 @@ export const useArticleStore = defineStore('article', {
     async fetchArticles(params = {}) {
       this.loading = true
       try {
-        const response = await articleApi.getArticles({
+        const response = await articlesApi.getArticles({
           page: this.page,
           limit: this.limit,
           ...params
@@ -65,7 +65,7 @@ export const useArticleStore = defineStore('article', {
     // 获取文章统计信息
     async fetchStats() {
       try {
-        const response = await articleApi.getArticleStats()
+        const response = await articlesApi.getArticleStats()
         if (response.code === 200) {
           this.stats = response.data
         }
@@ -76,12 +76,12 @@ export const useArticleStore = defineStore('article', {
     },
 
         // 获取单个文章
-    async getArticleById(id) {
+    async getArticle(id) {
       try {
         console.log('Store: Fetching article with ID:', id)
-        console.log('Store: Calling articleApi.getArticleById...')
+        console.log('Store: Calling articlesApi.getArticle...')
 
-        const response = await articleApi.getArticleById(id)
+        const response = await articlesApi.getArticle(id)
         console.log('Store: API response received:', response)
         console.log('Store: Response type:', typeof response)
         console.log('Store: Response keys:', Object.keys(response || {}))
@@ -158,7 +158,7 @@ export const useArticleStore = defineStore('article', {
     // 创建文章
     async createArticle(articleData) {
       try {
-        const response = await articleApi.createArticle(articleData)
+        const response = await articlesApi.createArticle(articleData)
         if (response.code === 200) {
           // 重新获取文章列表
           await this.fetchArticles()
@@ -173,7 +173,7 @@ export const useArticleStore = defineStore('article', {
     // 更新文章
     async updateArticle(id, articleData) {
       try {
-        const response = await articleApi.updateArticle(id, articleData)
+        const response = await articlesApi.updateArticle(id, articleData)
         if (response.code === 200) {
           // 更新当前文章
           if (this.currentArticle && this.currentArticle.id === id) {
@@ -195,7 +195,7 @@ export const useArticleStore = defineStore('article', {
     // 删除文章
     async deleteArticle(id) {
       try {
-        const response = await articleApi.deleteArticle(id)
+        const response = await articlesApi.deleteArticle(id)
         if (response.code === 200) {
           // 从列表中移除
           this.articles = this.articles.filter(article => article.id !== id)
