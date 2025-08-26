@@ -1,19 +1,19 @@
 <template>
-  <div class="tools-development-container">
+  <div class="tools-image-container">
     <div class="tools-header">
       <div class="breadcrumb">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item @click="navigateBack">工具箱</el-breadcrumb-item>
-          <el-breadcrumb-item>开发类</el-breadcrumb-item>
+          <el-breadcrumb-item>图像类</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
-      <h1>开发类工具</h1>
-      <p>开发过程中的实用工具集合</p>
+      <h1>图像类工具</h1>
+      <p>图片压缩、格式转换、编辑处理等工具</p>
     </div>
 
     <div class="tools-grid">
       <div 
-        v-for="tool in developmentTools" 
+        v-for="tool in imageTools" 
         :key="tool.id"
         class="tool-card"
         @click="navigateToTool(tool)"
@@ -50,47 +50,38 @@
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  Timer,
-  Document,
-  Key,
-  Connection,
+  Picture,
+  Crop,
+  ZoomIn,
   ArrowRight
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
-const developmentTools = reactive([
+const imageTools = reactive([
   {
-    id: 'timestamp-converter',
-    name: '时间戳转换',
-    description: '时间戳与日期时间相互转换，支持多种格式',
-    icon: Timer,
-    tags: ['时间', '转换', '格式化'],
-    route: 'tools-timestamp-converter'
+    id: 'image-compressor',
+    name: '图片压缩',
+    description: '在线图片压缩工具，支持JPG、PNG等格式',
+    icon: Picture,
+    tags: ['压缩', 'JPG', 'PNG', '优化'],
+    route: 'tools-image-compressor'
   },
   {
-    id: 'json-tools',
-    name: 'JSON工具',
-    description: 'JSON格式化、压缩、转YAML，支持语法高亮',
-    icon: Document,
-    tags: ['JSON', 'YAML', '格式化', '转换'],
-    route: 'tools-json-tools'
+    id: 'image-converter',
+    name: '格式转换',
+    description: '图片格式转换工具，支持多种格式互转',
+    icon: Crop,
+    tags: ['转换', '格式', 'JPG', 'PNG', 'WebP'],
+    route: 'tools-image-converter'
   },
   {
-    id: 'string-generator',
-    name: '字符串生成',
-    description: '生成随机字符串，支持自定义长度和字符集',
-    icon: Key,
-    tags: ['密码', '随机', '字符串', 'API密钥'],
-    route: 'tools-string-generator'
-  },
-  {
-    id: 'http-status-codes',
-    name: 'HTTP状态码',
-    description: 'HTTP状态码查询工具，包含详细说明和使用场景',
-    icon: Connection,
-    tags: ['HTTP', '状态码', 'API', '网络'],
-    route: 'tools-http-status-codes'
+    id: 'image-resizer',
+    name: '尺寸调整',
+    description: '调整图片尺寸，支持等比缩放和自定义尺寸',
+    icon: ZoomIn,
+    tags: ['尺寸', '缩放', '裁剪', '调整'],
+    route: 'tools-image-resizer'
   }
 ])
 
@@ -104,7 +95,7 @@ const navigateToTool = (tool) => {
 </script>
 
 <style scoped>
-.tools-development-container {
+.tools-image-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
@@ -145,7 +136,9 @@ const navigateToTool = (tool) => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
+  max-width: 1200px;
   width: 100%;
+  justify-content: center;
 }
 
 .tool-card {

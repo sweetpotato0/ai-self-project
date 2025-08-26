@@ -1,19 +1,19 @@
 <template>
-  <div class="tools-development-container">
+  <div class="tools-query-container">
     <div class="tools-header">
       <div class="breadcrumb">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item @click="navigateBack">工具箱</el-breadcrumb-item>
-          <el-breadcrumb-item>开发类</el-breadcrumb-item>
+          <el-breadcrumb-item>查询类</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
-      <h1>开发类工具</h1>
-      <p>开发过程中的实用工具集合</p>
+      <h1>查询类工具</h1>
+      <p>IP查询、域名查询、whois等查询工具</p>
     </div>
 
     <div class="tools-grid">
       <div 
-        v-for="tool in developmentTools" 
+        v-for="tool in queryTools" 
         :key="tool.id"
         class="tool-card"
         @click="navigateToTool(tool)"
@@ -49,48 +49,40 @@
 <script setup>
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { 
-  Timer,
-  Document,
-  Key,
+  Search,
+  Position,
   Connection,
   ArrowRight
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
-const developmentTools = reactive([
+const queryTools = reactive([
   {
-    id: 'timestamp-converter',
-    name: '时间戳转换',
-    description: '时间戳与日期时间相互转换，支持多种格式',
-    icon: Timer,
-    tags: ['时间', '转换', '格式化'],
-    route: 'tools-timestamp-converter'
+    id: 'ip-lookup',
+    name: 'IP地址查询',
+    description: 'IP地址归属地查询，获取地理位置和ISP信息',
+    icon: Position,
+    tags: ['IP', '地址', '归属地', 'ISP'],
+    route: 'tools-ip-lookup'
   },
   {
-    id: 'json-tools',
-    name: 'JSON工具',
-    description: 'JSON格式化、压缩、转YAML，支持语法高亮',
-    icon: Document,
-    tags: ['JSON', 'YAML', '格式化', '转换'],
-    route: 'tools-json-tools'
+    id: 'whois-lookup',
+    name: 'Whois查询',
+    description: '域名whois信息查询，获取注册信息和DNS记录',
+    icon: Search,
+    tags: ['Whois', '域名', '注册', 'DNS'],
+    route: 'tools-whois-lookup'
   },
   {
-    id: 'string-generator',
-    name: '字符串生成',
-    description: '生成随机字符串，支持自定义长度和字符集',
-    icon: Key,
-    tags: ['密码', '随机', '字符串', 'API密钥'],
-    route: 'tools-string-generator'
-  },
-  {
-    id: 'http-status-codes',
-    name: 'HTTP状态码',
-    description: 'HTTP状态码查询工具，包含详细说明和使用场景',
+    id: 'domain-info',
+    name: '域名信息',
+    description: '域名详细信息查询，包括SSL证书和网站信息',
     icon: Connection,
-    tags: ['HTTP', '状态码', 'API', '网络'],
-    route: 'tools-http-status-codes'
+    tags: ['域名', 'SSL', '证书', '网站'],
+    route: 'tools-domain-info'
   }
 ])
 
@@ -99,12 +91,12 @@ const navigateBack = () => {
 }
 
 const navigateToTool = (tool) => {
-  router.push({ name: tool.route })
+  ElMessage.info(`${tool.name} 即将上线，敬请期待！`)
 }
 </script>
 
 <style scoped>
-.tools-development-container {
+.tools-query-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
@@ -145,7 +137,9 @@ const navigateToTool = (tool) => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
+  max-width: 1200px;
   width: 100%;
+  justify-content: center;
 }
 
 .tool-card {

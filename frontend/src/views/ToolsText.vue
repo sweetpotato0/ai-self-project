@@ -1,19 +1,19 @@
 <template>
-  <div class="tools-development-container">
+  <div class="tools-text-container">
     <div class="tools-header">
       <div class="breadcrumb">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item @click="navigateBack">工具箱</el-breadcrumb-item>
-          <el-breadcrumb-item>开发类</el-breadcrumb-item>
+          <el-breadcrumb-item>文本类</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
-      <h1>开发类工具</h1>
-      <p>开发过程中的实用工具集合</p>
+      <h1>文本类工具</h1>
+      <p>文本处理、格式转换、编码解码等工具</p>
     </div>
 
     <div class="tools-grid">
       <div 
-        v-for="tool in developmentTools" 
+        v-for="tool in textTools" 
         :key="tool.id"
         class="tool-card"
         @click="navigateToTool(tool)"
@@ -50,7 +50,6 @@
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  Timer,
   Document,
   Key,
   Connection,
@@ -59,38 +58,30 @@ import {
 
 const router = useRouter()
 
-const developmentTools = reactive([
+const textTools = reactive([
   {
-    id: 'timestamp-converter',
-    name: '时间戳转换',
-    description: '时间戳与日期时间相互转换，支持多种格式',
-    icon: Timer,
-    tags: ['时间', '转换', '格式化'],
-    route: 'tools-timestamp-converter'
-  },
-  {
-    id: 'json-tools',
-    name: 'JSON工具',
-    description: 'JSON格式化、压缩、转YAML，支持语法高亮',
-    icon: Document,
-    tags: ['JSON', 'YAML', '格式化', '转换'],
-    route: 'tools-json-tools'
-  },
-  {
-    id: 'string-generator',
-    name: '字符串生成',
-    description: '生成随机字符串，支持自定义长度和字符集',
+    id: 'base64-encoder',
+    name: 'Base64编码',
+    description: 'Base64编码解码工具，支持文本和文件',
     icon: Key,
-    tags: ['密码', '随机', '字符串', 'API密钥'],
-    route: 'tools-string-generator'
+    tags: ['Base64', '编码', '解码', '加密'],
+    route: 'tools-base64-encoder'
   },
   {
-    id: 'http-status-codes',
-    name: 'HTTP状态码',
-    description: 'HTTP状态码查询工具，包含详细说明和使用场景',
+    id: 'url-encoder',
+    name: 'URL编码',
+    description: 'URL编码解码工具，处理特殊字符转换',
     icon: Connection,
-    tags: ['HTTP', '状态码', 'API', '网络'],
-    route: 'tools-http-status-codes'
+    tags: ['URL', '编码', '解码', '转义'],
+    route: 'tools-url-encoder'
+  },
+  {
+    id: 'text-processor',
+    name: '文本处理器',
+    description: '文本格式化、大小写转换、去重等处理',
+    icon: Document,
+    tags: ['文本', '格式化', '转换', '处理'],
+    route: 'tools-text-processor'
   }
 ])
 
@@ -104,7 +95,7 @@ const navigateToTool = (tool) => {
 </script>
 
 <style scoped>
-.tools-development-container {
+.tools-text-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
@@ -145,7 +136,9 @@ const navigateToTool = (tool) => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
+  max-width: 1200px;
   width: 100%;
+  justify-content: center;
 }
 
 .tool-card {

@@ -1,19 +1,19 @@
 <template>
-  <div class="tools-development-container">
+  <div class="tools-operations-container">
     <div class="tools-header">
       <div class="breadcrumb">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item @click="navigateBack">工具箱</el-breadcrumb-item>
-          <el-breadcrumb-item>开发类</el-breadcrumb-item>
+          <el-breadcrumb-item>运维类</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
-      <h1>开发类工具</h1>
-      <p>开发过程中的实用工具集合</p>
+      <h1>运维类工具</h1>
+      <p>服务器监控、网络工具、系统管理等工具</p>
     </div>
 
     <div class="tools-grid">
       <div 
-        v-for="tool in developmentTools" 
+        v-for="tool in operationsTools" 
         :key="tool.id"
         class="tool-card"
         @click="navigateToTool(tool)"
@@ -49,48 +49,40 @@
 <script setup>
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { 
-  Timer,
-  Document,
-  Key,
+  Monitor,
   Connection,
+  Position,
   ArrowRight
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
-const developmentTools = reactive([
+const operationsTools = reactive([
   {
-    id: 'timestamp-converter',
-    name: '时间戳转换',
-    description: '时间戳与日期时间相互转换，支持多种格式',
-    icon: Timer,
-    tags: ['时间', '转换', '格式化'],
-    route: 'tools-timestamp-converter'
-  },
-  {
-    id: 'json-tools',
-    name: 'JSON工具',
-    description: 'JSON格式化、压缩、转YAML，支持语法高亮',
-    icon: Document,
-    tags: ['JSON', 'YAML', '格式化', '转换'],
-    route: 'tools-json-tools'
-  },
-  {
-    id: 'string-generator',
-    name: '字符串生成',
-    description: '生成随机字符串，支持自定义长度和字符集',
-    icon: Key,
-    tags: ['密码', '随机', '字符串', 'API密钥'],
-    route: 'tools-string-generator'
-  },
-  {
-    id: 'http-status-codes',
-    name: 'HTTP状态码',
-    description: 'HTTP状态码查询工具，包含详细说明和使用场景',
+    id: 'ping-tool',
+    name: 'Ping测试',
+    description: '网络连通性测试工具，检测主机是否可达',
     icon: Connection,
-    tags: ['HTTP', '状态码', 'API', '网络'],
-    route: 'tools-http-status-codes'
+    tags: ['网络', 'Ping', '连通性', '延迟'],
+    route: 'tools-ping-tool'
+  },
+  {
+    id: 'port-scanner',
+    name: '端口扫描',
+    description: '检测主机开放端口，分析网络服务状态',
+    icon: Monitor,
+    tags: ['端口', '扫描', '网络', '服务'],
+    route: 'tools-port-scanner'
+  },
+  {
+    id: 'dns-lookup',
+    name: 'DNS查询',
+    description: 'DNS解析查询工具，查看域名解析信息',
+    icon: Position,
+    tags: ['DNS', '域名', '解析', '查询'],
+    route: 'tools-dns-lookup'
   }
 ])
 
@@ -99,12 +91,16 @@ const navigateBack = () => {
 }
 
 const navigateToTool = (tool) => {
-  router.push({ name: tool.route })
+  if (tool.id === 'ping-tool') {
+    router.push({ name: tool.route })
+  } else {
+    ElMessage.info(`${tool.name} 即将上线，敬请期待！`)
+  }
 }
 </script>
 
 <style scoped>
-.tools-development-container {
+.tools-operations-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
@@ -145,7 +141,9 @@ const navigateToTool = (tool) => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
+  max-width: 1200px;
   width: 100%;
+  justify-content: center;
 }
 
 .tool-card {

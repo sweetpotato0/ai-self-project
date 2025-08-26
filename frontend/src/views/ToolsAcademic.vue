@@ -1,19 +1,19 @@
 <template>
-  <div class="tools-development-container">
+  <div class="tools-academic-container">
     <div class="tools-header">
       <div class="breadcrumb">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item @click="navigateBack">工具箱</el-breadcrumb-item>
-          <el-breadcrumb-item>开发类</el-breadcrumb-item>
+          <el-breadcrumb-item>学术类</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
-      <h1>开发类工具</h1>
-      <p>开发过程中的实用工具集合</p>
+      <h1>学术类工具</h1>
+      <p>论文工具、数学计算、学术格式等工具</p>
     </div>
 
     <div class="tools-grid">
       <div 
-        v-for="tool in developmentTools" 
+        v-for="tool in academicTools" 
         :key="tool.id"
         class="tool-card"
         @click="navigateToTool(tool)"
@@ -49,48 +49,40 @@
 <script setup>
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { 
-  Timer,
-  Document,
-  Key,
-  Connection,
+  Reading,
+  Operation,
+  DataAnalysis,
   ArrowRight
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
-const developmentTools = reactive([
+const academicTools = reactive([
   {
-    id: 'timestamp-converter',
-    name: '时间戳转换',
-    description: '时间戳与日期时间相互转换，支持多种格式',
-    icon: Timer,
-    tags: ['时间', '转换', '格式化'],
-    route: 'tools-timestamp-converter'
+    id: 'citation-generator',
+    name: '引用生成器',
+    description: '生成各种学术引用格式，支持APA、MLA、Chicago等',
+    icon: Reading,
+    tags: ['引用', 'APA', 'MLA', '论文'],
+    route: 'tools-citation-generator'
   },
   {
-    id: 'json-tools',
-    name: 'JSON工具',
-    description: 'JSON格式化、压缩、转YAML，支持语法高亮',
-    icon: Document,
-    tags: ['JSON', 'YAML', '格式化', '转换'],
-    route: 'tools-json-tools'
+    id: 'math-calculator',
+    name: '数学计算器',
+    description: '高级数学计算工具，支持复杂函数和公式计算',
+    icon: Operation,
+    tags: ['数学', '计算', '函数', '公式'],
+    route: 'tools-math-calculator'
   },
   {
-    id: 'string-generator',
-    name: '字符串生成',
-    description: '生成随机字符串，支持自定义长度和字符集',
-    icon: Key,
-    tags: ['密码', '随机', '字符串', 'API密钥'],
-    route: 'tools-string-generator'
-  },
-  {
-    id: 'http-status-codes',
-    name: 'HTTP状态码',
-    description: 'HTTP状态码查询工具，包含详细说明和使用场景',
-    icon: Connection,
-    tags: ['HTTP', '状态码', 'API', '网络'],
-    route: 'tools-http-status-codes'
+    id: 'data-analyzer',
+    name: '数据分析',
+    description: '简单的数据分析工具，统计计算和图表生成',
+    icon: DataAnalysis,
+    tags: ['数据', '统计', '分析', '图表'],
+    route: 'tools-data-analyzer'
   }
 ])
 
@@ -99,12 +91,16 @@ const navigateBack = () => {
 }
 
 const navigateToTool = (tool) => {
-  router.push({ name: tool.route })
+  if (tool.id === 'citation-generator' || tool.id === 'math-calculator') {
+    router.push({ name: tool.route })
+  } else {
+    ElMessage.info(`${tool.name} 即将上线，敬请期待！`)
+  }
 }
 </script>
 
 <style scoped>
-.tools-development-container {
+.tools-academic-container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
@@ -145,7 +141,9 @@ const navigateToTool = (tool) => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
+  max-width: 1200px;
   width: 100%;
+  justify-content: center;
 }
 
 .tool-card {

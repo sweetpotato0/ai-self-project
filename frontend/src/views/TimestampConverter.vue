@@ -417,6 +417,12 @@ onUnmounted(() => {
 
 .tool-header {
   margin-bottom: 30px;
+  text-align: left;
+}
+
+.tool-header h1,
+.tool-header p {
+  text-align: center;
 }
 
 .breadcrumb {
