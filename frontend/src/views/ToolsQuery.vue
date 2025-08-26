@@ -91,7 +91,7 @@ const navigateBack = () => {
 }
 
 const navigateToTool = (tool) => {
-  ElMessage.info(`${tool.name} 即将上线，敬请期待！`)
+  router.push({ name: tool.route })
 }
 </script>
 

@@ -245,6 +245,9 @@ const pageTitle = computed(() => {
     'tools-citation-generator': '引用生成器',
     'tools-math-calculator': '数学计算器',
     'tools-ping-tool': 'Ping测试',
+    'tools-ip-lookup': 'IP地址查询',
+    'tools-whois-lookup': 'Whois查询',
+    'tools-domain-info': '域名信息查询',
     settings: '系统设置',
     profile: '个人资料'
   }

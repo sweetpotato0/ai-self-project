@@ -198,6 +198,22 @@ const routes = [
         path: 'tools/hash-calculator',
         name: 'tools-hash-calculator',
         component: () => import('@/views/HashCalculator.vue')
+      },
+      // 查询类工具
+      {
+        path: 'tools/ip-lookup',
+        name: 'tools-ip-lookup',
+        component: () => import('@/views/IPLookup.vue')
+      },
+      {
+        path: 'tools/whois-lookup',
+        name: 'tools-whois-lookup',
+        component: () => import('@/views/WhoisLookup.vue')
+      },
+      {
+        path: 'tools/domain-info',
+        name: 'tools-domain-info',
+        component: () => import('@/views/DomainInfo.vue')
       }
     ]
   },
