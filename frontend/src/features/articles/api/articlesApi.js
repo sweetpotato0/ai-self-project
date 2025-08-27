@@ -237,7 +237,7 @@ export const articlesApi = {
    * @returns {Promise} 统计数据
    */
   getArticleStats(params = {}) {
-    return api.get('/articles/stats', { params })
+    return api.get('/statistics', { params: { type: 'article', ...params } })
   },
 
   /**

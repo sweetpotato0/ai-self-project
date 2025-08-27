@@ -42,10 +42,10 @@ export const useStatisticsStore = defineStore('statistics', () => {
       const promises = []
       
       if (types.includes('todo')) {
-        promises.push(todosApi.getStats().then(result => ({ type: 'todo', result })))
+        promises.push(todosApi.getTodoStats().then(result => ({ type: 'todo', result })))
       }
       if (types.includes('article')) {
-        promises.push(articlesApi.getStats().then(result => ({ type: 'article', result })))
+        promises.push(articlesApi.getArticleStats().then(result => ({ type: 'article', result })))
       }
 
       const results = await Promise.all(promises)
@@ -69,7 +69,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchTodoStats = async () => {
     try {
-      const response = await todosApi.getStats()
+      const response = await todosApi.getTodoStats()
       if (response.code === 200) {
         todoStats.value = response.data
       }
@@ -81,7 +81,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchArticleStats = async () => {
     try {
-      const response = await articlesApi.getStats()
+      const response = await articlesApi.getArticleStats()
       if (response.code === 200) {
         articleStats.value = response.data
       }
@@ -95,11 +95,11 @@ export const useStatisticsStore = defineStore('statistics', () => {
     try {
       let response
       if (type === 'todo') {
-        response = await analyticsApi.getTrends({ metric: 'tasks', ...params })
+        response = await analyticsApi.getTrends({ type: 'todo', ...params })
       } else if (type === 'article') {
-        response = await analyticsApi.getTrends({ metric: 'articles', ...params })
+        response = await analyticsApi.getTrends({ type: 'article', ...params })
       } else {
-        response = await analyticsApi.getTrends({ metric: type, ...params })
+        response = await analyticsApi.getTrends({ type: type, ...params })
       }
       
       if (response.code === 200) {
@@ -117,7 +117,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchTodoTrends = async (params = {}) => {
     try {
-      const response = await analyticsApi.getTrends({ metric: 'tasks', ...params })
+      const response = await analyticsApi.getTrends({ type: 'todo', ...params })
       if (response.code === 200) {
         todoTrends.value = response.data
       }
@@ -129,7 +129,7 @@ export const useStatisticsStore = defineStore('statistics', () => {
 
   const fetchArticleTrends = async (params = {}) => {
     try {
-      const response = await analyticsApi.getTrends({ metric: 'articles', ...params })
+      const response = await analyticsApi.getTrends({ type: 'article', ...params })
       if (response.code === 200) {
         articleTrends.value = response.data
       }

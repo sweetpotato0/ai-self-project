@@ -15,7 +15,7 @@ export const authApi = {
    * @returns {Promise} 注册结果
    */
   register(userData) {
-    return api.post('/auth/register', {
+    return api.post('/users/register', {
       username: userData.username,
       email: userData.email,
       password: userData.password,
@@ -32,8 +32,8 @@ export const authApi = {
    * @returns {Promise} 登录结果包含token和用户信息
    */
   login(credentials) {
-    return api.post('/auth/login', {
-      email: credentials.email,
+    return api.post('/users/login', {
+      username: credentials.username || credentials.email,
       password: credentials.password,
       remember_me: credentials.rememberMe || false
     })
@@ -63,7 +63,7 @@ export const authApi = {
    * @returns {Promise} 用户详细信息
    */
   getCurrentUser() {
-    return api.get('/auth/me')
+    return api.get('/users/profile')
   },
 
   /**
@@ -76,7 +76,7 @@ export const authApi = {
    * @returns {Promise} 更新结果
    */
   updateProfile(profileData) {
-    return api.put('/auth/profile', profileData)
+    return api.put('/users/profile', profileData)
   },
 
   /**

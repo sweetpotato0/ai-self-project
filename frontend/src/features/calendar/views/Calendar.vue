@@ -306,6 +306,14 @@
           </el-select>
         </el-form-item>
 
+        <el-form-item label="分类">
+          <hover-category-selector
+            v-model="quickAddForm.category_id"
+            :categories="todoStore.categories"
+            placeholder="选择分类"
+          />
+        </el-form-item>
+
         <el-form-item label="描述">
           <el-input
             v-model="quickAddForm.description"
@@ -457,6 +465,7 @@ import { useRouter } from 'vue-router'
 import { useTodoStore } from '@/stores/todo'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, ArrowLeft, ArrowRight, Calendar, List } from '@element-plus/icons-vue'
+import HoverCategorySelector from '@/components/common/HoverCategorySelector.vue'
 
 const router = useRouter()
 const todoStore = useTodoStore()
@@ -490,7 +499,8 @@ const quickAddForm = ref({
   startDate: '',
   endDate: '',
   priority: 'medium',
-  description: ''
+  description: '',
+  category_id: null
 })
 
 // 计算属性
@@ -964,7 +974,8 @@ const addQuickTask = async () => {
       endTime: '10:00',
       isAllDay: false,
       priority: 'medium',
-      description: ''
+      description: '',
+      category_id: null
     }
   } catch (error) {
     console.error('添加任务失败:', error)
@@ -1113,6 +1124,7 @@ const getStatusText = (status) => {
 // 生命周期
 onMounted(async () => {
   await todoStore.fetchTodos()
+  await todoStore.fetchCategories()
 })
 </script>
 

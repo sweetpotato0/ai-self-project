@@ -8,25 +8,26 @@ export const analyticsApi = {
   /**
    * 获取全局统计数据汇总
    * @param {Object} params - 查询参数
+   * @param {string} params.type - 统计类型
    * @param {string} params.period - 时间周期: day, week, month, year
    * @param {string} params.start_date - 开始日期
    * @param {string} params.end_date - 结束日期
    * @returns {Promise} API响应
    */
   getOverallStats(params = {}) {
-    return api.get('/analytics/overview', { params })
+    return api.get('/statistics', { params })
   },
 
   /**
    * 获取全局趋势数据
    * @param {Object} params - 查询参数
-   * @param {string} params.metric - 指标类型: tasks, articles, users
+   * @param {string} params.type - 统计类型: tasks, articles, users
    * @param {string} params.period - 时间周期
    * @param {number} params.days - 查询天数
    * @returns {Promise} API响应
    */
   getTrends(params = {}) {
-    return api.get('/analytics/trends', { params })
+    return api.get('/statistics/trends', { params })
   },
 
   /**
@@ -38,7 +39,7 @@ export const analyticsApi = {
    * @returns {Promise} API响应
    */
   getModuleComparison(params = {}) {
-    return api.get('/analytics/comparison', { params })
+    return api.get('/statistics/comparison', { params })
   },
 
   /**
@@ -49,7 +50,7 @@ export const analyticsApi = {
    * @returns {Promise} API响应
    */
   getUserActivity(params = {}) {
-    return api.get('/analytics/activity', { params })
+    return api.get('/statistics/activity', { params })
   },
 
   /**
@@ -60,7 +61,7 @@ export const analyticsApi = {
    * @returns {Promise} API响应
    */
   getPerformanceStats(params = {}) {
-    return api.get('/analytics/performance', { params })
+    return api.get('/statistics/performance', { params })
   },
 
   /**
@@ -72,7 +73,7 @@ export const analyticsApi = {
    * @returns {Promise} API响应
    */
   exportReport(params = {}) {
-    return api.post('/analytics/export', params, {
+    return api.post('/statistics/export', params, {
       responseType: 'blob'
     })
   }

@@ -140,7 +140,7 @@ export const todosApi = {
    * @returns {Promise} 分类列表
    */
   getTodoCategories() {
-    return api.get('/todos/categories')
+    return api.get('/categories')
   },
 
   /**
@@ -152,7 +152,7 @@ export const todosApi = {
    * @returns {Promise} 创建的分类信息
    */
   createTodoCategory(categoryData) {
-    return api.post('/todos/categories', categoryData)
+    return api.post('/categories', categoryData)
   },
 
   /**
@@ -162,7 +162,7 @@ export const todosApi = {
    * @returns {Promise} 更新结果
    */
   updateTodoCategory(categoryId, categoryData) {
-    return api.put(`/todos/categories/${categoryId}`, categoryData)
+    return api.put(`/categories/${categoryId}`, categoryData)
   },
 
   /**
@@ -171,7 +171,7 @@ export const todosApi = {
    * @returns {Promise} 删除结果
    */
   deleteTodoCategory(categoryId) {
-    return api.delete(`/todos/categories/${categoryId}`)
+    return api.delete(`/categories/${categoryId}`)
   },
 
   /**
@@ -191,7 +191,7 @@ export const todosApi = {
    * @returns {Promise} 统计数据
    */
   getTodoStats(params = {}) {
-    return api.get('/todos/stats', { params })
+    return api.get('/statistics', { params: { type: 'todo', ...params } })
   },
 
   /**

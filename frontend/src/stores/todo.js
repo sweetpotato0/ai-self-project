@@ -2,10 +2,11 @@ import { todosApi } from '@/features/todos/api'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { notificationManager } from '@/utils/notificationManager'
+import { notificationManager } from '@/features/tools/shared/utils/notificationManager'
 
 export const useTodoStore = defineStore('todo', () => {
   const todos = ref([])
+  const categories = ref([])
   const loading = ref(false)
 
   // 获取TODO列表
@@ -126,14 +127,77 @@ export const useTodoStore = defineStore('todo', () => {
     return stats
   }
 
+  // 获取分类列表
+  const fetchCategories = async () => {
+    try {
+      const response = await todosApi.getTodoCategories()
+      categories.value = response.data || []
+    } catch (error) {
+      console.error('Failed to fetch categories:', error)
+      ElMessage.error('获取分类列表失败')
+    }
+  }
+
+  // 创建分类
+  const createCategory = async (categoryData) => {
+    try {
+      const response = await todosApi.createTodoCategory(categoryData)
+      const newCategory = response.data.category
+      categories.value.push(newCategory)
+      ElMessage.success('分类创建成功')
+      return true
+    } catch (error) {
+      ElMessage.error('创建分类失败')
+      return false
+    }
+  }
+
+  // 更新分类
+  const updateCategory = async (id, categoryData) => {
+    try {
+      const response = await todosApi.updateTodoCategory(id, categoryData)
+      const updatedCategory = response.data.category
+      const index = categories.value.findIndex(cat => cat.id === id)
+      if (index !== -1) {
+        categories.value[index] = updatedCategory
+      }
+      ElMessage.success('分类更新成功')
+      return true
+    } catch (error) {
+      ElMessage.error('更新分类失败')
+      return false
+    }
+  }
+
+  // 删除分类
+  const deleteCategory = async (id) => {
+    try {
+      await todosApi.deleteTodoCategory(id)
+      const index = categories.value.findIndex(cat => cat.id === id)
+      if (index !== -1) {
+        categories.value.splice(index, 1)
+      }
+      ElMessage.success('分类删除成功')
+      return true
+    } catch (error) {
+      ElMessage.error('删除分类失败')
+      return false
+    }
+  }
+
   return {
     todos,
+    categories,
     loading,
     fetchTodos,
     createTodo,
     updateTodo,
     deleteTodo,
     toggleTodoStatus,
-    getStats
+    getStats,
+    fetchCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory
   }
 })

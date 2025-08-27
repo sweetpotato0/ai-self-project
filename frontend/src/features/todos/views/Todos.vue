@@ -8,7 +8,9 @@
       </el-button>
     </div>
 
-    <div class="todos-content">
+    <el-tabs v-model="activeTab" class="todos-tabs">
+      <el-tab-pane label="任务列表" name="todos">
+        <div class="todos-content">
       <!-- 筛选和搜索 -->
       <div class="filter-section">
         <el-row :gutter="20">
@@ -32,15 +34,11 @@
             </el-select>
           </el-col>
           <el-col :span="6">
-            <el-select v-model="filters.category" placeholder="分类筛选" clearable>
-              <el-option label="全部" value="" />
-              <el-option
-                v-for="category in todoStore.categories"
-                :key="category.id"
-                :label="category.name"
-                :value="category.id"
-              />
-            </el-select>
+            <hover-category-selector
+              v-model="filters.category"
+              :categories="todoStore.categories"
+              placeholder="分类筛选"
+            />
           </el-col>
           <el-col :span="6">
             <el-input
@@ -156,7 +154,13 @@
           </template>
         </el-table-column>
       </el-table>
-    </div>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane label="分类管理" name="categories">
+        <CategoryManager />
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 新建/编辑任务对话框 -->
     <el-dialog
@@ -192,14 +196,11 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="分类">
-              <el-select v-model="form.category_id" placeholder="选择分类">
-                <el-option
-                  v-for="category in todoStore.categories"
-                  :key="category.id"
-                  :label="category.name"
-                  :value="category.id"
-                />
-              </el-select>
+              <hover-category-selector
+                v-model="form.category_id"
+                :categories="todoStore.categories"
+                placeholder="选择分类"
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -338,12 +339,15 @@ import { useAuthStore } from '@/stores/auth'
 import { useTodoStore } from '@/stores/todo'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { formatDateTime, isOverdue } from '@/utils/dateTime'
+import { formatDateTime, isOverdue } from '@/features/tools/shared/utils/dateTime'
+import CategoryManager from '../components/CategoryManager.vue'
+import HoverCategorySelector from '@/components/common/HoverCategorySelector.vue'
 
 const authStore = useAuthStore()
 const todoStore = useTodoStore()
 
 // 响应式数据
+const activeTab = ref('todos')
 const showDialog = ref(false)
 const editingTodo = ref(null)
 const saving = ref(false)
@@ -632,7 +636,10 @@ const resetForm = () => {
 
 // 生命周期
 onMounted(async () => {
-  await todoStore.fetchTodos()
+  await Promise.all([
+    todoStore.fetchTodos(),
+    todoStore.fetchCategories()
+  ])
 })
 </script>
 
@@ -654,6 +661,20 @@ onMounted(async () => {
 .todos-header h2 {
   margin: 0;
   color: #303133;
+}
+
+.todos-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.todos-tabs :deep(.el-tabs__content) {
+  flex: 1;
+}
+
+.todos-tabs :deep(.el-tab-pane) {
+  height: 100%;
 }
 
 .todos-content {
