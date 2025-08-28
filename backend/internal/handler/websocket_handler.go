@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gin-web-framework/internal/service"
 	"gin-web-framework/pkg/jwt"
+	"gin-web-framework/pkg/logger"
 	"net/http"
 	"time"
 
@@ -21,12 +22,14 @@ var upgrader = websocket.Upgrader{
 // WebSocketHandler WebSocket处理器
 type WebSocketHandler struct {
 	realtimeService *service.RealtimeNotificationService
+	logger          logger.LoggerInterface
 }
 
 // NewWebSocketHandler 创建WebSocket处理器
-func NewWebSocketHandler() *WebSocketHandler {
+func NewWebSocketHandler(logger logger.LoggerInterface) *WebSocketHandler {
 	return &WebSocketHandler{
-		realtimeService: service.NewRealtimeNotificationService(),
+		realtimeService: service.NewRealtimeNotificationService(logger),
+		logger:          logger,
 	}
 }
 
@@ -109,7 +112,7 @@ func (h *WebSocketHandler) WebSocket(c *gin.Context) {
 			}
 		case "get_notifications":
 			// 获取最新通知
-			notificationService := service.NewNotificationService()
+			notificationService := service.NewNotificationService(h.logger)
 			notifications, err := notificationService.GetUserNotifications(userID, 10)
 			if err != nil {
 				fmt.Printf("Failed to get notifications: %v\n", err)
@@ -133,7 +136,12 @@ func (h *WebSocketHandler) WebSocket(c *gin.Context) {
 }
 
 // 获取WebSocket处理器实例
-var websocketHandler = NewWebSocketHandler()
+var websocketHandler *WebSocketHandler
+
+// InitWebSocketHandler 初始化WebSocket处理器
+func InitWebSocketHandler(logger logger.LoggerInterface) {
+	websocketHandler = NewWebSocketHandler(logger)
+}
 
 // WebSocketHandlerFunc 返回WebSocket处理函数
 func WebSocketHandlerFunc(c *gin.Context) {

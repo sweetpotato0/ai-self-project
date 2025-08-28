@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
+	"gin-web-framework/pkg/logger"
 	"time"
 )
 
@@ -12,9 +13,9 @@ type NotificationManager struct {
 	notificationService *NotificationService
 }
 
-func NewNotificationManager() *NotificationManager {
+func NewNotificationManager(logger logger.LoggerInterface) *NotificationManager {
 	return &NotificationManager{
-		notificationService: NewNotificationService(),
+		notificationService: NewNotificationService(logger),
 	}
 }
 
@@ -56,7 +57,7 @@ func (nm *NotificationManager) CheckTaskDueNotifications() error {
 			},
 		}
 
-		if _, err := nm.notificationService.CreateNotification(req); err != nil {
+		if _, err := nm.notificationService.CreateNotification(*req); err != nil {
 			fmt.Printf("Failed to create due soon notification for task %d: %v\n", task.ID, err)
 		}
 	}
@@ -91,7 +92,7 @@ func (nm *NotificationManager) CheckTaskDueNotifications() error {
 			},
 		}
 
-		if _, err := nm.notificationService.CreateNotification(req); err != nil {
+		if _, err := nm.notificationService.CreateNotification(*req); err != nil {
 			fmt.Printf("Failed to create overdue notification for task %d: %v\n", task.ID, err)
 		}
 	}
@@ -113,7 +114,7 @@ func (nm *NotificationManager) CreateTaskCompletedNotification(task *models.Todo
 		},
 	}
 
-	_, err := nm.notificationService.CreateNotification(req)
+	_, err := nm.notificationService.CreateNotification(*req)
 	return err
 }
 
@@ -131,7 +132,7 @@ func (nm *NotificationManager) CreateArticlePublishedNotification(article *model
 		},
 	}
 
-	_, err := nm.notificationService.CreateNotification(req)
+	_, err := nm.notificationService.CreateNotification(*req)
 	return err
 }
 
@@ -145,7 +146,7 @@ func (nm *NotificationManager) CreateSystemNotification(userID uint, title, mess
 		Data:    data,
 	}
 
-	_, err := nm.notificationService.CreateNotification(req)
+	_, err := nm.notificationService.CreateNotification(*req)
 	return err
 }
 
@@ -167,7 +168,7 @@ func (nm *NotificationManager) CreateWelcomeNotification(userID uint, username s
 		},
 	}
 
-	_, err := nm.notificationService.CreateNotification(req)
+	_, err := nm.notificationService.CreateNotification(*req)
 	return err
 }
 
@@ -229,7 +230,7 @@ func (nm *NotificationManager) CreateDailySummaryNotification(userID uint) error
 		},
 	}
 
-	_, err := nm.notificationService.CreateNotification(req)
+	_, err := nm.notificationService.CreateNotification(*req)
 	return err
 }
 
@@ -278,6 +279,6 @@ func (nm *NotificationManager) CreateWeeklyReportNotification(userID uint) error
 		},
 	}
 
-	_, err := nm.notificationService.CreateNotification(req)
+	_, err := nm.notificationService.CreateNotification(*req)
 	return err
 }

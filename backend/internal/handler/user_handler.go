@@ -2,6 +2,7 @@ package handler
 
 import (
 	"gin-web-framework/internal/service"
+	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
 	"github.com/gin-gonic/gin"
 	"strconv"
@@ -10,12 +11,14 @@ import (
 // UserHandler 用户处理器
 type UserHandler struct {
 	userService service.UserServiceInterface
+	logger     logger.LoggerInterface
 }
 
 // NewUserHandler 创建用户处理器
-func NewUserHandler(userService service.UserServiceInterface) *UserHandler {
+func NewUserHandler(userService service.UserServiceInterface, logger logger.LoggerInterface) *UserHandler {
 	return &UserHandler{
 		userService: userService,
+		logger:     logger,
 	}
 }
 

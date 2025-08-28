@@ -5,16 +5,21 @@ import (
 	"fmt"
 	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
+	"gin-web-framework/pkg/logger"
 
 	"gorm.io/gorm"
 )
 
 // CategoryService 分类服务
-type CategoryService struct{}
+type CategoryService struct{
+	logger logger.LoggerInterface
+}
 
 // NewCategoryService 创建分类服务实例
-func NewCategoryService() *CategoryService {
-	return &CategoryService{}
+func NewCategoryService(logger logger.LoggerInterface) *CategoryService {
+	return &CategoryService{
+		logger: logger,
+	}
 }
 
 type CreateCategoryRequest struct {

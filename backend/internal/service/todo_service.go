@@ -7,14 +7,19 @@ import (
 
 	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
+	"gin-web-framework/pkg/logger"
 
 	"gorm.io/gorm"
 )
 
-type TodoService struct{}
+type TodoService struct{
+	logger logger.LoggerInterface
+}
 
-func NewTodoService() *TodoService {
-	return &TodoService{}
+func NewTodoService(logger logger.LoggerInterface) *TodoService {
+	return &TodoService{
+		logger: logger,
+	}
 }
 
 // CreateTodoRequest 创建TODO请求
@@ -143,7 +148,7 @@ func (s *TodoService) UpdateTodo(todoID, userID uint, req UpdateTodoRequest) (*m
 			todo.CompletedAt = &now
 
 			// 创建任务完成通知
-			notificationManager := NewNotificationManager()
+			notificationManager := NewNotificationManager(s.logger)
 			if err := notificationManager.CreateTaskCompletedNotification(&todo); err != nil {
 				fmt.Printf("Failed to create completion notification: %v\n", err)
 			}

@@ -5,13 +5,18 @@ import (
 	"fmt"
 	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
+	"gin-web-framework/pkg/logger"
 	"time"
 )
 
-type NotificationService struct{}
+type NotificationService struct{
+	logger logger.LoggerInterface
+}
 
-func NewNotificationService() *NotificationService {
-	return &NotificationService{}
+func NewNotificationService(logger logger.LoggerInterface) *NotificationService {
+	return &NotificationService{
+		logger: logger,
+	}
 }
 
 // CreateNotificationRequest 创建通知请求
@@ -41,7 +46,7 @@ type PaginatedNotifications struct {
 }
 
 // CreateNotification 创建通知
-func (s *NotificationService) CreateNotification(req *CreateNotificationRequest) (*models.Notification, error) {
+func (s *NotificationService) CreateNotification(req CreateNotificationRequest) (*models.Notification, error) {
 	db := database.GetDB()
 
 	dataJSON := ""
@@ -68,7 +73,7 @@ func (s *NotificationService) CreateNotification(req *CreateNotificationRequest)
 }
 
 // GetNotifications 获取用户通知列表（分页）
-func (s *NotificationService) GetNotifications(userID uint, filter *NotificationFilter) (*PaginatedNotifications, error) {
+func (s *NotificationService) GetNotifications(userID uint, filter NotificationFilter) (*PaginatedNotifications, error) {
 	db := database.GetDB()
 
 	var notifications []*models.Notification
@@ -196,7 +201,7 @@ func (s *NotificationService) CreateTaskNotification(userID uint, taskTitle stri
 		return fmt.Errorf("unknown notification type: %s", notificationType)
 	}
 
-	req := &CreateNotificationRequest{
+	req := CreateNotificationRequest{
 		UserID:  userID,
 		Type:    notificationType,
 		Title:   title,
@@ -228,7 +233,7 @@ func (s *NotificationService) GetUnreadNotifications(userID uint) ([]*models.Not
 // CreateSystemNotification 创建系统通知
 func (s *NotificationService) CreateSystemNotification(title, content string, userIDs []uint) error {
 	for _, userID := range userIDs {
-		req := &CreateNotificationRequest{
+		req := CreateNotificationRequest{
 			UserID:  userID,
 			Type:    "system",
 			Title:   title,

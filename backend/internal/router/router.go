@@ -1,7 +1,6 @@
 package router
 
 import (
-	"fmt"
 	"time"
 
 	"gin-web-framework/config"
@@ -53,7 +52,6 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 	// 认证中间件（可选认证）
 	r.Use(middleware.OptionalAuthMiddleware())
 
-	fmt.Println("0")
 	// 获取handler实例
 	userHandler := container.GetUserHandler()
 	todoHandler := container.GetTodoHandler()
@@ -62,14 +60,15 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 	statisticsHandler := container.GetStatisticsHandler()
 	categoryHandler := container.GetCategoryHandler()
 	settingsHandler := container.GetSettingsHandler()
+	toolsHandler := container.GetToolsHandler()
+	uploadHandler := container.GetUploadHandler()
 
-	fmt.Println("1")
 	// API路由组
 	apiGroup := r.Group("/api/v1")
 	{
 		// 健康检查和监控
-		apiGroup.GET("/health", handler.HealthCheck)
-		apiGroup.GET("/metrics", handler.GetMetrics)
+		apiGroup.GET("/health", settingsHandler.HealthCheck)
+		apiGroup.GET("/metrics", settingsHandler.GetMetrics)
 
 		// API文档
 		apiGroup.GET("/docs", api.GenerateSwaggerUIHandler())
@@ -121,7 +120,7 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 		// 上传相关路由
 		upload := apiGroup.Group("/upload")
 		{
-			upload.POST("/image", middleware.AuthMiddleware(), handler.UploadImage)
+			upload.POST("/image", middleware.AuthMiddleware(), uploadHandler.UploadImage)
 		}
 
 		// 统计相关路由
@@ -154,12 +153,17 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 			settings.GET("/export", middleware.AuthMiddleware(), settingsHandler.ExportData)
 			settings.DELETE("/completed-tasks", middleware.AuthMiddleware(), settingsHandler.ClearCompletedTasks)
 		}
+
+		// 工具相关路由
+		tools := apiGroup.Group("/tools")
+		{
+			// 网络工具
+			tools.POST("/network/port-scan", middleware.AuthMiddleware(), toolsHandler.PortScan)
+		}
 	}
 
-	fmt.Println("2")
 	// 静态文件服务
 	r.Static("/uploads", "./uploads")
-	fmt.Println("3")
 
 	return r
 }

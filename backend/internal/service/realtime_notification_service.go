@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
+	"gin-web-framework/pkg/logger"
 	"log"
 	"sync"
 	"time"
@@ -17,13 +18,15 @@ type RealtimeNotificationService struct {
 	clients    map[uint]*websocket.Conn // 用户ID -> WebSocket连接
 	clientsMux sync.RWMutex
 	stopChan   chan bool
+	logger     logger.LoggerInterface
 }
 
 // NewRealtimeNotificationService 创建实时通知服务
-func NewRealtimeNotificationService() *RealtimeNotificationService {
+func NewRealtimeNotificationService(logger logger.LoggerInterface) *RealtimeNotificationService {
 	return &RealtimeNotificationService{
 		clients:  make(map[uint]*websocket.Conn),
 		stopChan: make(chan bool),
+		logger:   logger,
 	}
 }
 
@@ -136,7 +139,7 @@ func (s *RealtimeNotificationService) checkOverdueTasks() {
 		return
 	}
 
-	notificationService := NewNotificationService()
+	notificationService := NewNotificationService(s.logger)
 
 	for _, task := range overdueTasks {
 		// 检查是否已经发送过逾期通知（避免重复通知）
@@ -148,7 +151,7 @@ func (s *RealtimeNotificationService) checkOverdueTasks() {
 		}
 
 		// 创建逾期通知
-		notification, err := notificationService.CreateNotification(&CreateNotificationRequest{
+		notification, err := notificationService.CreateNotification(CreateNotificationRequest{
 			UserID:  task.CreatedBy,
 			Type:    "overdue",
 			Title:   "任务已逾期",
@@ -188,7 +191,7 @@ func (s *RealtimeNotificationService) checkDueSoonTasks() {
 		return
 	}
 
-	notificationService := NewNotificationService()
+	notificationService := NewNotificationService(s.logger)
 
 	for _, task := range dueSoonTasks {
 		// 检查是否已经发送过即将到期通知
@@ -204,7 +207,7 @@ func (s *RealtimeNotificationService) checkDueSoonTasks() {
 		remainingMinutes := int(remainingTime.Minutes())
 
 		// 创建即将到期通知
-		notification, err := notificationService.CreateNotification(&CreateNotificationRequest{
+		notification, err := notificationService.CreateNotification(CreateNotificationRequest{
 			UserID:  task.CreatedBy,
 			Type:    "due_soon",
 			Title:   "任务即将到期",

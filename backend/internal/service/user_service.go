@@ -7,15 +7,22 @@ import (
 	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/pkg/auth"
+	pkgdb "gin-web-framework/pkg/database"
 	"gin-web-framework/pkg/jwt"
+	"gin-web-framework/pkg/logger"
+	"gin-web-framework/pkg/utils"
 
 	"gorm.io/gorm"
 )
 
-type UserService struct{}
+type UserService struct{
+	logger logger.LoggerInterface
+}
 
-func NewUserService() *UserService {
-	return &UserService{}
+func NewUserService(logger logger.LoggerInterface) *UserService {
+	return &UserService{
+		logger: logger,
+	}
 }
 
 type RegisterRequest struct {
@@ -62,11 +69,13 @@ func (s *UserService) Register(req RegisterRequest) (*models.User, error) {
 	// 检查用户名是否已存在
 	var existingUser models.User
 	if err := db.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+		s.logger.WithFields(map[string]any{"username": req.Username}).Warn("Registration failed: username already exists")
 		return nil, errors.New("username already exists")
 	}
 
 	// 检查邮箱是否已存在
 	if err := db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+		s.logger.WithFields(map[string]any{"email": req.Email}).Warn("Registration failed: email already exists")
 		return nil, errors.New("email already exists")
 	}
 
@@ -84,9 +93,11 @@ func (s *UserService) Register(req RegisterRequest) (*models.User, error) {
 	}
 
 	if err := db.Create(&user).Error; err != nil {
+		s.logger.WithFields(map[string]any{"username": req.Username, "error": err}).Error("Failed to create user")
 		return nil, fmt.Errorf("failed to create user: %v", err)
 	}
 
+	s.logger.WithFields(map[string]any{"user_id": user.ID, "username": user.Username}).Info("User registered successfully")
 	return &user, nil
 }
 
@@ -105,6 +116,7 @@ func (s *UserService) Login(req LoginRequest) (*LoginResponse, error) {
 
 	// 验证密码
 	if !auth.CheckPassword(req.Password, user.Password) {
+		s.logger.WithFields(map[string]any{"username": req.Username}).Warn("Login failed: invalid password")
 		return nil, errors.New("invalid username or password")
 	}
 
@@ -114,6 +126,7 @@ func (s *UserService) Login(req LoginRequest) (*LoginResponse, error) {
 		return nil, fmt.Errorf("failed to generate token: %v", err)
 	}
 
+	s.logger.WithFields(map[string]any{"user_id": user.ID, "username": user.Username}).Info("User logged in successfully")
 	return &LoginResponse{
 		Token: token,
 		User:  user,
@@ -193,19 +206,17 @@ func (s *UserService) ListUsers(page, limit int) (*PaginatedUsers, error) {
 	}
 
 	// 获取分页数据
-	offset := (page - 1) * limit
-	if err := db.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
-		return nil, fmt.Errorf("failed to get users: %v", err)
+	pagination := utils.NewPaginationInfo(page, limit, total)
+	if err := db.Offset(pagination.Offset).Limit(pagination.Limit).Find(&users).Error; err != nil {
+		return nil, pkgdb.FindRecordError("users", err)
 	}
-
-	totalPages := int((total + int64(limit) - 1) / int64(limit))
 
 	return &PaginatedUsers{
 		Users:      users,
-		Total:      total,
-		Page:       page,
-		Limit:      limit,
-		TotalPages: totalPages,
+		Total:      pagination.Total,
+		Page:       pagination.Page,
+		Limit:      pagination.Limit,
+		TotalPages: pagination.TotalPages,
 	}, nil
 }
 

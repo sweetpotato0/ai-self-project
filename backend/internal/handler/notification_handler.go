@@ -2,6 +2,7 @@ package handler
 
 import (
 	"gin-web-framework/internal/service"
+	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -19,12 +20,14 @@ func getUserIDFromContext(c *gin.Context) uint {
 }
 
 type NotificationHandler struct {
-	notificationService *service.NotificationService
+	notificationService service.NotificationServiceInterface
+	logger             logger.LoggerInterface
 }
 
-func NewNotificationHandler() *NotificationHandler {
+func NewNotificationHandler(notificationService service.NotificationServiceInterface, logger logger.LoggerInterface) *NotificationHandler {
 	return &NotificationHandler{
-		notificationService: service.NewNotificationService(),
+		notificationService: notificationService,
+		logger:             logger,
 	}
 }
 
@@ -42,14 +45,20 @@ func (h *NotificationHandler) GetNotifications(c *gin.Context) {
 		limit = 20
 	}
 
-	notifications, err := h.notificationService.GetUserNotifications(userID, limit)
+	filter := service.NotificationFilter{
+		Limit: limit,
+	}
+	result, err := h.notificationService.GetNotifications(userID, filter)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to get notifications")
 		return
 	}
 
 	response.Success(c, gin.H{
-		"notifications": notifications,
+		"notifications": result.Notifications,
+		"total": result.Total,
+		"page": result.Page,
+		"limit": result.Limit,
 	})
 }
 
@@ -107,7 +116,7 @@ func (h *NotificationHandler) CheckNotifications(c *gin.Context) {
 	}
 
 	// 创建通知管理器并运行检查
-	notificationManager := service.NewNotificationManager()
+	notificationManager := service.NewNotificationManager(h.logger)
 	notificationManager.RunNotificationChecks()
 
 	response.Success(c, gin.H{

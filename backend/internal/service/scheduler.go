@@ -1,6 +1,7 @@
 package service
 
 import (
+	"gin-web-framework/pkg/logger"
 	"time"
 )
 
@@ -8,12 +9,14 @@ import (
 type Scheduler struct {
 	notificationManager *NotificationManager
 	stopChan            chan bool
+	logger              logger.LoggerInterface
 }
 
-func NewScheduler() *Scheduler {
+func NewScheduler(logger logger.LoggerInterface) *Scheduler {
 	return &Scheduler{
-		notificationManager: NewNotificationManager(),
+		notificationManager: NewNotificationManager(logger),
 		stopChan:            make(chan bool),
+		logger:              logger,
 	}
 }
 

@@ -4,16 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"gin-web-framework/internal/models"
+	"gin-web-framework/pkg/logger"
+	"gin-web-framework/pkg/utils"
 
 	"gorm.io/gorm"
 )
 
 type ArticleService struct {
-	db *gorm.DB
+	db     *gorm.DB
+	logger logger.LoggerInterface
 }
 
-func NewArticleService(db *gorm.DB) *ArticleService {
-	return &ArticleService{db: db}
+func NewArticleService(db *gorm.DB, logger logger.LoggerInterface) *ArticleService {
+	return &ArticleService{
+		db:     db,
+		logger: logger,
+	}
 }
 
 // CreateArticleRequest 创建文章请求
@@ -153,15 +159,7 @@ func (s *ArticleService) GetArticles(userID uint, filter ArticleFilter) (*Pagina
 	}
 
 	// 分页
-	page := filter.Page
-	if page <= 0 {
-		page = 1
-	}
-	limit := filter.Limit
-	if limit <= 0 {
-		limit = 10
-	}
-	offset := (page - 1) * limit
+	pagination := utils.NewPaginationInfo(filter.Page, filter.Limit, total)
 
 	// 排序
 	sortBy := filter.SortBy
@@ -173,18 +171,16 @@ func (s *ArticleService) GetArticles(userID uint, filter ArticleFilter) (*Pagina
 		sortOrder = "DESC"
 	}
 
-	if err := query.Order(sortBy + " " + sortOrder).Offset(offset).Limit(limit).Find(&articles).Error; err != nil {
+	if err := query.Order(sortBy + " " + sortOrder).Offset(pagination.Offset).Limit(pagination.Limit).Find(&articles).Error; err != nil {
 		return nil, err
 	}
 
-	totalPages := int((total + int64(limit) - 1) / int64(limit))
-
 	return &PaginatedArticles{
 		Articles:   articles,
-		Total:      total,
-		Page:       page,
-		Limit:      limit,
-		TotalPages: totalPages,
+		Total:      pagination.Total,
+		Page:       pagination.Page,
+		Limit:      pagination.Limit,
+		TotalPages: pagination.TotalPages,
 	}, nil
 }
 

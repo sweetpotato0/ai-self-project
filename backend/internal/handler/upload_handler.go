@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gin-web-framework/pkg/response"
+	"gin-web-framework/pkg/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type UploadHandler struct{}
@@ -31,15 +30,14 @@ func (h *UploadHandler) UploadImage(c *gin.Context) {
 	defer file.Close()
 
 	// 检查文件类型
-	contentType := header.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "image/") {
-		response.Error(c, http.StatusBadRequest, "只能上传图片文件")
+	if err := utils.ValidateImageFile(header); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// 检查文件大小 (5MB)
-	if header.Size > 5*1024*1024 {
-		response.Error(c, http.StatusBadRequest, "文件大小不能超过5MB")
+	if err := utils.ValidateFileSize(header, 5); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -51,8 +49,7 @@ func (h *UploadHandler) UploadImage(c *gin.Context) {
 	}
 
 	// 生成唯一文件名
-	ext := filepath.Ext(header.Filename)
-	filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+	filename := utils.GenerateUniqueFilename(header.Filename)
 	filepath := filepath.Join(uploadDir, filename)
 
 	// 创建文件
@@ -71,11 +68,13 @@ func (h *UploadHandler) UploadImage(c *gin.Context) {
 
 	// 返回文件URL
 	fileURL := fmt.Sprintf("/uploads/images/%s", filename)
+	contentType := header.Header.Get("Content-Type")
 
 	response.Success(c, gin.H{
 		"url":      fileURL,
 		"filename": filename,
-		"size":     header.Size,
+		"size":     utils.FormatFileSize(header.Size),
+		"size_bytes": header.Size,
 		"type":     contentType,
 	})
 }

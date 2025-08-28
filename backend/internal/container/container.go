@@ -52,6 +52,8 @@ type ContainerInterface interface {
 	GetStatisticsHandler() *handler.StatisticsHandler
 	GetCategoryHandler() *handler.CategoryHandler
 	GetSettingsHandler() *handler.SettingsHandler
+	GetToolsHandler() *handler.ToolsHandler
+	GetUploadHandler() *handler.UploadHandler
 
 	// 容器管理
 	Register(name string, service interface{})
@@ -77,28 +79,33 @@ func NewContainer(cfg config.ConfigInterface, db *gorm.DB, redisClient redis.Red
 
 // initializeAllServices 初始化所有服务，避免运行时死锁
 func (c *Container) initializeAllServices() {
-	// 创建所有服务实例
-	userService := service.NewUserService()
-	todoService := service.NewTodoService()
-	articleService := service.NewArticleService(c.db)
-	notificationService := service.NewNotificationService()
-	statisticsService := service.NewStatisticsService()
-	categoryService := service.NewCategoryService()
-	cacheService := service.NewCacheService(c.redis)
-	settingsService := service.NewSettingsService(c.db)
+	// 获取全局logger
+	globalLogger := logger.GetLogger()
+
+	// 创建所有服务实例 - 逐步添加logger
+	userService := service.NewUserService(globalLogger)
+	todoService := service.NewTodoService(globalLogger)
+	articleService := service.NewArticleService(c.db, globalLogger)
+	notificationService := service.NewNotificationService(globalLogger)
+	statisticsService := service.NewStatisticsService(globalLogger)
+	categoryService := service.NewCategoryService(globalLogger)
+	cacheService := service.NewCacheService(c.redis, globalLogger)
+	settingsService := service.NewSettingsService(c.db, globalLogger)
 
 	// 创建依赖缓存服务的组件
 	queryOptimizer := service.NewQueryOptimizer(c.db, cacheService)
 	statisticsCache := service.NewStatisticsCache(cacheService)
 
-	// 创建所有处理器实例
-	userHandler := handler.NewUserHandler(userService)
-	todoHandler := handler.NewTodoHandler(todoService)
-	articleHandler := handler.NewArticleHandler(articleService)
-	notificationHandler := handler.NewNotificationHandler()
-	statisticsHandler := handler.NewStatisticsHandler()
-	categoryHandler := handler.NewCategoryHandler()
-	settingsHandler := handler.NewSettingsHandler(settingsService)
+	// 创建所有处理器实例 - 逐步统一依赖注入模式
+	userHandler := handler.NewUserHandler(userService, globalLogger)
+	todoHandler := handler.NewTodoHandler(todoService, globalLogger)
+	articleHandler := handler.NewArticleHandler(articleService, globalLogger)
+	notificationHandler := handler.NewNotificationHandler(notificationService, globalLogger)
+	statisticsHandler := handler.NewStatisticsHandler(statisticsService, globalLogger)
+	categoryHandler := handler.NewCategoryHandler(categoryService, globalLogger)
+	settingsHandler := handler.NewSettingsHandler(settingsService, globalLogger)
+	toolsHandler := handler.NewToolsHandler(globalLogger)
+	uploadHandler := handler.NewUploadHandler()
 
 	// 注册所有服务
 	c.services["user_service"] = userService
@@ -120,6 +127,8 @@ func (c *Container) initializeAllServices() {
 	c.services["statistics_handler"] = statisticsHandler
 	c.services["category_handler"] = categoryHandler
 	c.services["settings_handler"] = settingsHandler
+	c.services["tools_handler"] = toolsHandler
+	c.services["upload_handler"] = uploadHandler
 
 	logger.Info("All services initialized successfully")
 }
@@ -203,6 +212,10 @@ func (c *Container) GetCategoryHandler() *handler.CategoryHandler {
 
 func (c *Container) GetSettingsHandler() *handler.SettingsHandler {
 	return c.services["settings_handler"].(*handler.SettingsHandler)
+}
+
+func (c *Container) GetToolsHandler() *handler.ToolsHandler {
+	return c.services["tools_handler"].(*handler.ToolsHandler)
 }
 
 // Register 注册服务
@@ -296,4 +309,10 @@ func InitializeContainer() error {
 
 	logger.Info("Container initialized successfully with all services pre-loaded")
 	return nil
+}
+
+
+// GetUploadHandler 获取上传处理器
+func (c *Container) GetUploadHandler() *handler.UploadHandler {
+	return c.services["upload_handler"].(*handler.UploadHandler)
 }

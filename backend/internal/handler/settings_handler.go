@@ -4,19 +4,23 @@ import (
 	"net/http"
 	"time"
 
+	"gin-web-framework/internal/middleware"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/internal/service"
+	"gin-web-framework/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )
 
 type SettingsHandler struct {
 	settingsService *service.SettingsService
+	logger          logger.LoggerInterface
 }
 
-func NewSettingsHandler(settingsService *service.SettingsService) *SettingsHandler {
+func NewSettingsHandler(settingsService *service.SettingsService, logger logger.LoggerInterface) *SettingsHandler {
 	return &SettingsHandler{
 		settingsService: settingsService,
+		logger:          logger,
 	}
 }
 
@@ -160,4 +164,31 @@ func (h *SettingsHandler) ClearCompletedTasks(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "已完成任务清理成功"})
+}
+
+// HealthCheck 健康检查
+func (h *SettingsHandler) HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"message": "Service is running",
+	})
+}
+
+// GetMetrics 获取性能指标
+func (h *SettingsHandler) GetMetrics(c *gin.Context) {
+	metrics := middleware.GetPerformanceMetrics()
+
+	c.JSON(http.StatusOK, gin.H{
+		"performance": map[string]interface{}{
+			"request_count":   metrics.RequestCount,
+			"avg_duration_ms": float64(metrics.AvgDuration.Nanoseconds()) / 1e6,
+			"max_duration_ms": float64(metrics.MaxDuration.Nanoseconds()) / 1e6,
+			"min_duration_ms": float64(metrics.MinDuration.Nanoseconds()) / 1e6,
+			"error_count":     metrics.ErrorCount,
+			"active_requests": metrics.ActiveRequests,
+			"memory_usage_mb": float64(metrics.MemoryUsage) / 1024 / 1024,
+			"goroutine_count": metrics.GoroutineCount,
+		},
+		"timestamp": c.GetInt64("timestamp"),
+	})
 }

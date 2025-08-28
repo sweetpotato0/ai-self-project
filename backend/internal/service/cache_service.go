@@ -22,12 +22,14 @@ type CacheService struct {
 	redisClient redis.RedisClient
 	localCache  *sync.Map // 本地缓存，用于热点数据
 	mutex       sync.RWMutex
+	logger      logger.LoggerInterface
 }
 
 // NewCacheService 创建缓存服务实例
-func NewCacheService(redisClient redis.RedisClient) *CacheService {
+func NewCacheService(redisClient redis.RedisClient, logger logger.LoggerInterface) *CacheService {
 	return &CacheService{
 		redisClient: redisClient,
+		logger:      logger,
 		localCache:  &sync.Map{},
 	}
 }

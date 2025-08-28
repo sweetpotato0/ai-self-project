@@ -2,6 +2,7 @@ package handler
 
 import (
 	"gin-web-framework/internal/service"
+	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
 	"strconv"
 
@@ -11,12 +12,14 @@ import (
 // TodoHandler 任务处理器
 type TodoHandler struct {
 	todoService service.TodoServiceInterface
+	logger      logger.LoggerInterface
 }
 
 // NewTodoHandler 创建任务处理器
-func NewTodoHandler(todoService service.TodoServiceInterface) *TodoHandler {
+func NewTodoHandler(todoService service.TodoServiceInterface, logger logger.LoggerInterface) *TodoHandler {
 	return &TodoHandler{
 		todoService: todoService,
+		logger:      logger,
 	}
 }
 

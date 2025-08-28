@@ -4,16 +4,21 @@ import (
 	"errors"
 
 	"gin-web-framework/internal/models"
+	"gin-web-framework/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type SettingsService struct {
-	db *gorm.DB
+	db     *gorm.DB
+	logger logger.LoggerInterface
 }
 
-func NewSettingsService(db *gorm.DB) *SettingsService {
-	return &SettingsService{db: db}
+func NewSettingsService(db *gorm.DB, logger logger.LoggerInterface) *SettingsService {
+	return &SettingsService{
+		db:     db,
+		logger: logger,
+	}
 }
 
 func (s *SettingsService) GetUserSettings(userID uint) (*models.UserSettings, error) {

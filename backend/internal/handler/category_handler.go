@@ -3,6 +3,7 @@ package handler
 import (
 	"gin-web-framework/internal/models"
 	"gin-web-framework/internal/service"
+	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
 	"strconv"
 
@@ -12,12 +13,14 @@ import (
 // CategoryHandler 分类处理器
 type CategoryHandler struct {
 	categoryService *service.CategoryService
+	logger         logger.LoggerInterface
 }
 
 // NewCategoryHandler 创建分类处理器
-func NewCategoryHandler() *CategoryHandler {
+func NewCategoryHandler(categoryService *service.CategoryService, logger logger.LoggerInterface) *CategoryHandler {
 	return &CategoryHandler{
-		categoryService: service.NewCategoryService(),
+		categoryService: categoryService,
+		logger:         logger,
 	}
 }
 

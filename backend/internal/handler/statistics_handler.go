@@ -2,6 +2,7 @@ package handler
 
 import (
 	"gin-web-framework/internal/service"
+	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
 	"net/http"
 
@@ -10,13 +11,15 @@ import (
 
 // StatisticsHandler 统计处理器
 type StatisticsHandler struct {
-	statisticsService *service.StatisticsService
+	statisticsService service.StatisticsServiceInterface
+	logger           logger.LoggerInterface
 }
 
 // NewStatisticsHandler 创建统计处理器
-func NewStatisticsHandler() *StatisticsHandler {
+func NewStatisticsHandler(statisticsService service.StatisticsServiceInterface, logger logger.LoggerInterface) *StatisticsHandler {
 	return &StatisticsHandler{
-		statisticsService: service.NewStatisticsService(),
+		statisticsService: statisticsService,
+		logger:           logger,
 	}
 }
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"gin-web-framework/internal/service"
+	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
 	"strconv"
 
@@ -10,11 +11,13 @@ import (
 
 type ArticleHandler struct {
 	articleService *service.ArticleService
+	logger         logger.LoggerInterface
 }
 
-func NewArticleHandler(articleService *service.ArticleService) *ArticleHandler {
+func NewArticleHandler(articleService *service.ArticleService, logger logger.LoggerInterface) *ArticleHandler {
 	return &ArticleHandler{
 		articleService: articleService,
+		logger:         logger,
 	}
 }
 
