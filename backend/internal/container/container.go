@@ -54,6 +54,7 @@ type ContainerInterface interface {
 	GetSettingsHandler() *handler.SettingsHandler
 	GetToolsHandler() *handler.ToolsHandler
 	GetUploadHandler() *handler.UploadHandler
+	GetWebSocketHandler() *handler.WebSocketHandler
 
 	// 容器管理
 	Register(name string, service interface{})
@@ -106,6 +107,7 @@ func (c *Container) initializeAllServices() {
 	settingsHandler := handler.NewSettingsHandler(settingsService, globalLogger)
 	toolsHandler := handler.NewToolsHandler(globalLogger)
 	uploadHandler := handler.NewUploadHandler()
+	websocketHandler := handler.NewWebSocketHandler(globalLogger)
 
 	// 注册所有服务
 	c.services["user_service"] = userService
@@ -129,6 +131,7 @@ func (c *Container) initializeAllServices() {
 	c.services["settings_handler"] = settingsHandler
 	c.services["tools_handler"] = toolsHandler
 	c.services["upload_handler"] = uploadHandler
+	c.services["websocket_handler"] = websocketHandler
 
 	logger.Info("All services initialized successfully")
 }
@@ -315,4 +318,9 @@ func InitializeContainer() error {
 // GetUploadHandler 获取上传处理器
 func (c *Container) GetUploadHandler() *handler.UploadHandler {
 	return c.services["upload_handler"].(*handler.UploadHandler)
+}
+
+// GetWebSocketHandler 获取WebSocket处理器
+func (c *Container) GetWebSocketHandler() *handler.WebSocketHandler {
+	return c.services["websocket_handler"].(*handler.WebSocketHandler)
 }

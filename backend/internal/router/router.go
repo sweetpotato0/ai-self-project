@@ -6,7 +6,6 @@ import (
 	"gin-web-framework/config"
 	"gin-web-framework/internal/api"
 	"gin-web-framework/internal/container"
-	"gin-web-framework/internal/handler"
 	"gin-web-framework/internal/middleware"
 
 	"github.com/gin-contrib/cors"
@@ -104,7 +103,7 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 		}
 
 		// WebSocket路由
-		apiGroup.GET("/ws", handler.WebSocketHandlerFunc)
+		apiGroup.GET("/ws", container.GetWebSocketHandler().WebSocket)
 
 		// 文章相关路由
 		articles := apiGroup.Group("/articles")
