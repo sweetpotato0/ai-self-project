@@ -49,7 +49,7 @@ const operationsTools = reactive([
 ])
 
 const navigateToTool = (tool) => {
-  if (tool.id === 'ping-tool') {
+  if (tool.id === 'ping-tool' || tool.id === 'port-scanner') {
     router.push({ name: tool.route })
   } else {
     ElMessage.info(`${tool.name} 即将上线，敬请期待！`)

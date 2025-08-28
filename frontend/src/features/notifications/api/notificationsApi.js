@@ -92,7 +92,7 @@ export const notificationsApi = {
    * @returns {Promise} 标记结果
    */
   markAsRead(notificationId) {
-    return api.patch(`/notifications/${notificationId}/read`)
+    return api.put(`/notifications/${notificationId}/read`)
   },
 
   /**

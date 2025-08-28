@@ -84,6 +84,11 @@ export const toolsRoutes = [
     name: 'tools-ping-tool',
     component: () => import('@/features/tools/network/PingTool.vue')
   },
+  {
+    path: 'tools/port-scanner',
+    name: 'tools-port-scanner',
+    component: () => import('@/features/tools/network/PortScanner.vue')
+  },
   // 查询工具
   {
     path: 'tools/query',
