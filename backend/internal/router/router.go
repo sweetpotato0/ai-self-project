@@ -59,7 +59,7 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 	statisticsHandler := container.GetStatisticsHandler()
 	categoryHandler := container.GetCategoryHandler()
 	settingsHandler := container.GetSettingsHandler()
-	toolsHandler := container.GetToolsHandler()
+	networkHandler := container.GetNetworkHandler()
 	uploadHandler := container.GetUploadHandler()
 
 	// API路由组
@@ -157,7 +157,8 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 		tools := apiGroup.Group("/tools")
 		{
 			// 网络工具
-			tools.POST("/network/port-scan", middleware.AuthMiddleware(), toolsHandler.PortScan)
+			tools.POST("/network/port-scan", middleware.AuthMiddleware(), networkHandler.PortScan)
+			tools.POST("/network/dns-lookup", middleware.AuthMiddleware(), networkHandler.DNSLookup)
 		}
 	}
 
