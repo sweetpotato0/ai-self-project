@@ -324,7 +324,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { toolsApi } from '@/api/toolsApi'
+import { networkApi } from '@/features/tools/network/api'
 import {
   Monitor,
   Search,
@@ -432,7 +432,7 @@ const startScan = async () => {
     currentScanInfo.value = `开始扫描 ${targetHost.value} 的 ${ports.length} 个端口...`
     
     // 调用后端API
-    const response = await toolsApi.portScan({
+    const response = await networkApi.portScan({
       target: targetHost.value,
       ports: ports,
       timeout: scanOptions.value.timeout,

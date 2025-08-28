@@ -77,7 +77,7 @@ export const toolsRoutes = [
   {
     path: 'tools/operations',
     name: 'tools-operations',
-    component: () => import('@/features/tools/network/views/ToolsOperations.vue')
+    component: () => import('@/features/tools/network/views/ToolsNetwork.vue')
   },
   {
     path: 'tools/ping-tool',
@@ -88,6 +88,11 @@ export const toolsRoutes = [
     path: 'tools/port-scanner',
     name: 'tools-port-scanner',
     component: () => import('@/features/tools/network/PortScanner.vue')
+  },
+  {
+    path: 'tools/dns-lookup',
+    name: 'tools-dns-lookup',
+    component: () => import('@/features/tools/network/DNSLookup.vue')
   },
   // 查询工具
   {
