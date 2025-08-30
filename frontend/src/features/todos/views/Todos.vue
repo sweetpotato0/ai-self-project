@@ -34,10 +34,13 @@
             </el-select>
           </el-col>
           <el-col :span="6">
-            <hover-category-selector
+            <category-cascader
               v-model="filters.category"
               :categories="todoStore.categories"
               placeholder="分类筛选"
+              :show-counts="true"
+              :get-todo-count="getCategoryTodoCount"
+              size="default"
             />
           </el-col>
           <el-col :span="6">
@@ -89,8 +92,8 @@
 
         <el-table-column prop="category_id" label="分类" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.category" type="info" size="small">
-              {{ row.category.name }}
+            <el-tag v-if="getCategoryName(row.category_id)" type="info" size="small">
+              {{ getCategoryName(row.category_id) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -158,7 +161,7 @@
       </el-tab-pane>
 
       <el-tab-pane label="分类管理" name="categories">
-        <CategoryManager />
+        <CategoryManagerV2 />
       </el-tab-pane>
     </el-tabs>
 
@@ -196,10 +199,13 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="分类">
-              <hover-category-selector
+              <category-cascader
                 v-model="form.category_id"
                 :categories="todoStore.categories"
                 placeholder="选择分类"
+                :show-counts="true"
+                :get-todo-count="getCategoryTodoCount"
+                size="default"
               />
             </el-form-item>
           </el-col>
@@ -340,8 +346,8 @@ import { useTodoStore } from '@/stores/todo'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { formatDateTime, isOverdue } from '@/features/tools/shared/utils/dateTime'
-import CategoryManager from '../components/CategoryManager.vue'
-import HoverCategorySelector from '@/components/common/HoverCategorySelector.vue'
+import CategoryManagerV2 from '../components/CategoryManagerV2.vue'
+import CategoryCascader from '@/components/common/CategoryCascader.vue'
 
 const authStore = useAuthStore()
 const todoStore = useTodoStore()
@@ -457,6 +463,18 @@ const getStatusText = (status) => {
 
 const formatDateTimeLocal = formatDateTime
 
+// 获取分类任务数量
+const getCategoryTodoCount = (categoryId) => {
+  return todoStore.todos.filter(todo => todo.category_id === categoryId).length
+}
+
+// 获取分类名称
+const getCategoryName = (categoryId) => {
+  if (!categoryId) return null
+  const category = todoStore.categories.find(cat => cat.id === categoryId)
+  return category ? category.name : null
+}
+
 // 设置时间预设
 const setTimePreset = (preset) => {
   form.start_time = preset.start
@@ -476,25 +494,54 @@ const editTodo = (todo) => {
   form.category_id = todo.category_id || null
       // 处理时间字段
     if (todo.start_date && todo.due_date) {
+      console.log('原始时间数据:', {
+        start_date: todo.start_date,
+        due_date: todo.due_date
+      })
+      
+      // 将UTC时间转换为本地时间进行编辑
       const startDate = new Date(todo.start_date)
       const endDate = new Date(todo.due_date)
-
-      // 检查是否为全天任务（开始时间00:00，结束时间23:59）
+      
+      // 获取本地时间的各个组件
       const startHour = startDate.getHours()
       const startMinute = startDate.getMinutes()
       const endHour = endDate.getHours()
       const endMinute = endDate.getMinutes()
-
-      if (startHour === 0 && startMinute === 0 && endHour === 23 && endMinute === 59) {
+      
+      console.log('本地时间解析后:', {
+        startTime: `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`,
+        endTime: `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
+      })
+      
+      // 检查是否为全天任务（UTC时间的00:00-23:59在本地时间可能会有时区偏移）
+      // 但我们检查时间差是否接近24小时来判断是否为全天任务
+      const timeDiffMs = endDate.getTime() - startDate.getTime()
+      const timeDiffHours = timeDiffMs / (1000 * 60 * 60)
+      
+      if (Math.abs(timeDiffHours - 24) < 0.1) { // 允许小的误差
         // 全天任务
         form.isAllDay = true
-        form.start_date = startDate.toISOString().split('T')[0]
+        const year = startDate.getFullYear()
+        const month = (startDate.getMonth() + 1).toString().padStart(2, '0')
+        const day = startDate.getDate().toString().padStart(2, '0')
+        form.start_date = `${year}-${month}-${day}`
         form.due_date = ''
+        form.start_time = '09:00'
+        form.due_time = '10:00'
       } else {
         // 非全天任务
         form.isAllDay = false
-        form.start_date = startDate.toISOString().split('T')[0]
-        form.due_date = endDate.toISOString().split('T')[0]
+        const startYear = startDate.getFullYear()
+        const startMonth = (startDate.getMonth() + 1).toString().padStart(2, '0')
+        const startDay = startDate.getDate().toString().padStart(2, '0')
+        form.start_date = `${startYear}-${startMonth}-${startDay}`
+        
+        const endYear = endDate.getFullYear()
+        const endMonth = (endDate.getMonth() + 1).toString().padStart(2, '0')
+        const endDay = endDate.getDate().toString().padStart(2, '0')
+        form.due_date = `${endYear}-${endMonth}-${endDay}`
+        
         form.start_time = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`
         form.due_time = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
       }

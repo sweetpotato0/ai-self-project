@@ -68,6 +68,12 @@
             </el-menu-item>
           </el-tooltip>
 
+          <el-tooltip content="审计日志" placement="right">
+            <el-menu-item index="audit-logs" @click="navigateTo('audit-logs')">
+              <el-icon><Monitor /></el-icon>
+            </el-menu-item>
+          </el-tooltip>
+
           <el-tooltip content="系统设置" placement="right">
             <el-menu-item index="settings" @click="navigateTo('settings')">
               <el-icon><Setting /></el-icon>
@@ -104,6 +110,11 @@
           <el-menu-item index="tools" @click="navigateTo('tools')">
             <el-icon><Tools /></el-icon>
             <span>工具箱</span>
+          </el-menu-item>
+
+          <el-menu-item index="audit-logs" @click="navigateTo('audit-logs')">
+            <el-icon><Monitor /></el-icon>
+            <span>审计日志</span>
           </el-menu-item>
 
           <el-menu-item index="settings" @click="navigateTo('settings')">
@@ -202,7 +213,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import {
   Grid, Fold, Expand, DataBoard, List, Calendar,
-  TrendCharts, Setting, User, SwitchButton, Document, Tools
+  TrendCharts, Setting, User, SwitchButton, Document, Tools, Monitor
 } from '@element-plus/icons-vue'
 import NotificationPanel from '@/components/notification/NotificationPanel.vue'
 import WebSocketNotification from '@/components/notification/WebSocketNotification.vue'

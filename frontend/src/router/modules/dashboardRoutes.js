@@ -44,5 +44,10 @@ export const dashboardRoutes = [
     path: 'notifications',
     name: 'notifications',
     component: () => import('@/features/notifications/views/Notifications.vue')
+  },
+  {
+    path: 'audit-logs',
+    name: 'audit-logs',
+    component: () => import('@/features/audit/views/AuditLogs.vue')
   }
 ]

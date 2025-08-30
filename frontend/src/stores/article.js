@@ -122,14 +122,23 @@ export const useArticleStore = defineStore('article', {
     // 点赞文章
     async likeArticle(id) {
       try {
-        // 这里可以调用后端API来点赞
-        // 目前先在前端更新
-        const article = this.articles.find(a => a.id === id)
-        if (article) {
-          article.like_count = (article.like_count || 0) + 1
-        }
-        if (this.currentArticle && this.currentArticle.id === id) {
-          this.currentArticle.like_count = (this.currentArticle.like_count || 0) + 1
+        console.log('Store: Liking article with ID:', id)
+        const response = await articlesApi.likeArticle(id)
+        console.log('Store: Like API response:', response)
+        
+        if (response && response.code === 200) {
+          // 更新本地数据
+          const article = this.articles.find(a => a.id === id)
+          if (article) {
+            article.like_count = (article.like_count || 0) + 1
+          }
+          if (this.currentArticle && this.currentArticle.id === id) {
+            this.currentArticle.like_count = (this.currentArticle.like_count || 0) + 1
+          }
+          console.log('Store: Article like count updated locally')
+          return true
+        } else {
+          throw new Error(response?.message || '点赞失败')
         }
       } catch (error) {
         console.error('Failed to like article:', error)
@@ -140,14 +149,23 @@ export const useArticleStore = defineStore('article', {
     // 取消点赞文章
     async unlikeArticle(id) {
       try {
-        // 这里可以调用后端API来取消点赞
-        // 目前先在前端更新
-        const article = this.articles.find(a => a.id === id)
-        if (article) {
-          article.like_count = Math.max(0, (article.like_count || 0) - 1)
-        }
-        if (this.currentArticle && this.currentArticle.id === id) {
-          this.currentArticle.like_count = Math.max(0, (this.currentArticle.like_count || 0) - 1)
+        console.log('Store: Unliking article with ID:', id)
+        const response = await articlesApi.unlikeArticle(id)
+        console.log('Store: Unlike API response:', response)
+        
+        if (response && response.code === 200) {
+          // 更新本地数据
+          const article = this.articles.find(a => a.id === id)
+          if (article) {
+            article.like_count = Math.max(0, (article.like_count || 0) - 1)
+          }
+          if (this.currentArticle && this.currentArticle.id === id) {
+            this.currentArticle.like_count = Math.max(0, (this.currentArticle.like_count || 0) - 1)
+          }
+          console.log('Store: Article like count updated locally')
+          return true
+        } else {
+          throw new Error(response?.message || '取消点赞失败')
         }
       } catch (error) {
         console.error('Failed to unlike article:', error)
@@ -219,6 +237,11 @@ export const useArticleStore = defineStore('article', {
     // 清空当前文章
     clearCurrentArticle() {
       this.currentArticle = null
+    },
+
+    // 获取单个文章的别名方法
+    async getArticleById(id) {
+      return await this.getArticle(id)
     },
 
     // 重置状态

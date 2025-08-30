@@ -45,6 +45,9 @@ type ContainerInterface interface {
 	GetStatisticsCache() *service.StatisticsCache
 	GetToolsService() service.ToolsServiceInterface
 
+	// 审计服务
+	GetAuditService() *service.AuditService
+
 	// 处理器层
 	GetUserHandler() *handler.UserHandler
 	GetTodoHandler() *handler.TodoHandler
@@ -54,6 +57,7 @@ type ContainerInterface interface {
 	GetCategoryHandler() *handler.CategoryHandler
 	GetSettingsHandler() *handler.SettingsHandler
 	GetNetworkHandler() *handler.NetworkHandler
+	GetAuditHandler() *handler.AuditHandler
 	GetUploadHandler() *handler.UploadHandler
 	GetWebSocketHandler() *handler.WebSocketHandler
 
@@ -94,6 +98,7 @@ func (c *Container) initializeAllServices() {
 	cacheService := service.NewCacheService(c.redis, globalLogger)
 	settingsService := service.NewSettingsService(c.db, globalLogger)
 	toolsService := service.NewToolsService(globalLogger)
+	auditService := service.NewAuditService(c.db, globalLogger.(*logger.Logger))
 
 	// 创建依赖缓存服务的组件
 	queryOptimizer := service.NewQueryOptimizer(c.db, cacheService)
@@ -108,6 +113,7 @@ func (c *Container) initializeAllServices() {
 	categoryHandler := handler.NewCategoryHandler(categoryService, globalLogger)
 	settingsHandler := handler.NewSettingsHandler(settingsService, globalLogger)
 	networkHandler := handler.NewNetworkHandler(globalLogger, toolsService)
+	auditHandler := handler.NewAuditHandler(auditService, globalLogger.(*logger.Logger))
 	uploadHandler := handler.NewUploadHandler()
 	websocketHandler := handler.NewWebSocketHandler(globalLogger)
 
@@ -121,6 +127,7 @@ func (c *Container) initializeAllServices() {
 	c.services["cache_service"] = cacheService
 	c.services["settings_service"] = settingsService
 	c.services["tools_service"] = toolsService
+	c.services["audit_service"] = auditService
 	c.services["query_optimizer"] = queryOptimizer
 	c.services["statistics_cache"] = statisticsCache
 
@@ -133,6 +140,7 @@ func (c *Container) initializeAllServices() {
 	c.services["category_handler"] = categoryHandler
 	c.services["settings_handler"] = settingsHandler
 	c.services["network_handler"] = networkHandler
+	c.services["audit_handler"] = auditHandler
 	c.services["upload_handler"] = uploadHandler
 	c.services["websocket_handler"] = websocketHandler
 
@@ -227,6 +235,14 @@ func (c *Container) GetToolsService() service.ToolsServiceInterface {
 
 func (c *Container) GetNetworkHandler() *handler.NetworkHandler {
 	return c.services["network_handler"].(*handler.NetworkHandler)
+}
+
+func (c *Container) GetAuditHandler() *handler.AuditHandler {
+	return c.services["audit_handler"].(*handler.AuditHandler)
+}
+
+func (c *Container) GetAuditService() *service.AuditService {
+	return c.services["audit_service"].(*service.AuditService)
 }
 
 // Register 注册服务

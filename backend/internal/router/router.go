@@ -7,6 +7,7 @@ import (
 	"gin-web-framework/internal/api"
 	"gin-web-framework/internal/container"
 	"gin-web-framework/internal/middleware"
+	"gin-web-framework/pkg/logger"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -50,6 +51,10 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 
 	// 认证中间件（可选认证）
 	r.Use(middleware.OptionalAuthMiddleware())
+	
+	// 审计日志中间件
+	auditMiddleware := middleware.NewAuditMiddleware(container.GetDB(), logger.GetLogger().(*logger.Logger))
+	r.Use(auditMiddleware.AuditLog())
 
 	// 获取handler实例
 	userHandler := container.GetUserHandler()
@@ -60,6 +65,7 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 	categoryHandler := container.GetCategoryHandler()
 	settingsHandler := container.GetSettingsHandler()
 	networkHandler := container.GetNetworkHandler()
+	auditHandler := container.GetAuditHandler()
 	uploadHandler := container.GetUploadHandler()
 
 	// API路由组
@@ -114,6 +120,9 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 			articles.GET("/:id", middleware.AuthMiddleware(), articleHandler.GetArticleByID)
 			articles.PUT("/:id", middleware.AuthMiddleware(), articleHandler.UpdateArticle)
 			articles.DELETE("/:id", middleware.AuthMiddleware(), articleHandler.DeleteArticle)
+			articles.POST("/:id/like", middleware.AuthMiddleware(), articleHandler.LikeArticle)
+			articles.DELETE("/:id/like", middleware.AuthMiddleware(), articleHandler.UnlikeArticle)
+			articles.POST("/:id/view", articleHandler.IncrementViewCount) // 浏览量不需要认证
 		}
 
 		// 上传相关路由
@@ -159,6 +168,15 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 			// 网络工具
 			tools.POST("/network/port-scan", middleware.AuthMiddleware(), networkHandler.PortScan)
 			tools.POST("/network/dns-lookup", middleware.AuthMiddleware(), networkHandler.DNSLookup)
+		}
+
+		// 审计日志相关路由
+		auditLogs := apiGroup.Group("/audit-logs")
+		{
+			auditLogs.GET("", middleware.AuthMiddleware(), auditHandler.GetAuditLogs)
+			auditLogs.GET("/:id", middleware.AuthMiddleware(), auditHandler.GetAuditLogByID)
+			auditLogs.GET("/stats", middleware.AuthMiddleware(), auditHandler.GetAuditLogStats)
+			auditLogs.DELETE("", middleware.AuthMiddleware(), auditHandler.DeleteAuditLogs)
 		}
 	}
 

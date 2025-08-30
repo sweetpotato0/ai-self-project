@@ -207,12 +207,31 @@ func generateRequestID() string {
 
 // containsSQLInjection 检查是否包含SQL注入模式
 func containsSQLInjection(input string) bool {
+	// 危险的SQL注入模式，但要更加精确地检测
 	sqlPatterns := []string{
-		"';", "--", "/*", "*/", "union", "select", "insert", "update", "delete", "drop", "create",
-		"exec", "execute", "script", "javascript:", "vbscript:", "onload", "onerror",
+		"';", "')", "'|", "' or ", "' OR ", "' and ", "' AND ",
+		"--", "/*", "*/", " union ", " UNION ", " select * ", " SELECT * ",
+		"insert into", "INSERT INTO", "update set", "UPDATE SET",
+		"delete from", "DELETE FROM", "drop table", "DROP TABLE",
+		"create table", "CREATE TABLE", "exec(", "execute(",
+		"script>", "javascript:", "vbscript:", "onload=", "onerror=",
+		"xp_cmdshell", "sp_executesql",
 	}
 
 	input = strings.ToLower(input)
+	
+	// 对于短字符串，只检查明显的注入模式
+	if len(input) < 10 {
+		shortPatterns := []string{"';", "')", "'|", "--", "/*", "*/"}
+		for _, pattern := range shortPatterns {
+			if strings.Contains(input, pattern) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 对于较长的字符串，检查更多模式
 	for _, pattern := range sqlPatterns {
 		if strings.Contains(input, pattern) {
 			return true

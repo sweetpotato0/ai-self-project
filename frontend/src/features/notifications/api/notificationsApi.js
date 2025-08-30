@@ -121,7 +121,7 @@ export const notificationsApi = {
    * @returns {Promise} 标记结果
    */
   markAllAsRead(filters = {}) {
-    return api.patch('/notifications/mark-all-read', filters)
+    return api.put('/notifications/mark-all-read', filters)
   },
 
   /**
