@@ -23,5 +23,27 @@ type Article struct {
 	DeletedAt  gorm.DeletedAt `json:"deleted_at" gorm:"index"`
 
 	// 关联
-	User User `json:"user" gorm:"foreignKey:CreatedBy"`
+	User      User          `json:"user" gorm:"foreignKey:CreatedBy"`
+	UserLikes []ArticleLike `json:"-" gorm:"foreignKey:ArticleID"`
+
+	// 虚拟字段 - 不存储在数据库中
+	IsLikedByUser bool `json:"is_liked_by_user" gorm:"-"`
+}
+
+// ArticleLike 文章点赞关系模型
+type ArticleLike struct {
+	ID        uint           `json:"id" gorm:"primaryKey"`
+	ArticleID uint           `json:"article_id" gorm:"not null;index:idx_article_user,unique"`
+	UserID    uint           `json:"user_id" gorm:"not null;index:idx_article_user,unique"`
+	CreatedAt time.Time      `json:"created_at"`
+	DeletedAt gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+
+	// 关联
+	Article Article `json:"article" gorm:"foreignKey:ArticleID"`
+	User    User    `json:"user" gorm:"foreignKey:UserID"`
+}
+
+// 添加唯一索引
+func (ArticleLike) TableName() string {
+	return "article_likes"
 }

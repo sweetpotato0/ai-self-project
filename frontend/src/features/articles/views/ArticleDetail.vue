@@ -134,14 +134,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import ArticleDialog from '@/components/article/ArticleDialog.vue'
 import { useArticleStore } from '@/stores/article'
 import { useAuthStore } from '@/stores/auth'
+import { ArrowLeft, Edit, Loading, Share, Star, User, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, View, Star, User, Edit, Share, Loading } from '@element-plus/icons-vue'
-import ArticleDialog from '@/components/article/ArticleDialog.vue'
 import MarkdownIt from 'markdown-it'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
@@ -217,7 +217,10 @@ const loadArticle = async () => {
 
     if (result) {
       article.value = result
+      // 设置用户点赞状态
+      isLiked.value = result.is_liked_by_user || false
       console.log('Article loaded successfully:', article.value)
+      console.log('User like status:', isLiked.value)
     } else {
       console.error('No article data returned')
       ElMessage.error('文章数据为空')
@@ -264,16 +267,25 @@ const likeArticle = async () => {
     if (isLiked.value) {
       await articleStore.unlikeArticle(article.value.id)
       isLiked.value = false
-      article.value.like_count--
       ElMessage.success('取消点赞成功')
     } else {
       await articleStore.likeArticle(article.value.id)
       isLiked.value = true
-      article.value.like_count++
       ElMessage.success('点赞成功')
     }
   } catch (error) {
-    ElMessage.error('操作失败')
+    console.error('Like article error:', error)
+    if (error.response?.data?.message === 'Already liked this article') {
+      ElMessage.warning('您已经点赞过这篇文章')
+      // 如果后端说已经点赞过了，更新前端状态
+      isLiked.value = true
+    } else if (error.response?.data?.message === 'Not liked yet') {
+      ElMessage.warning('您还没有点赞过这篇文章')
+      // 如果后端说还没点赞过，更新前端状态
+      isLiked.value = false
+    } else {
+      ElMessage.error('操作失败: ' + (error.response?.data?.error || error.message))
+    }
   }
 }
 

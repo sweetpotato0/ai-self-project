@@ -12,6 +12,10 @@
             <el-icon><Plus /></el-icon>
             快速添加
           </el-button>
+          <el-button size="large" @click="showHolidaySettings = true">
+            <el-icon><Calendar /></el-icon>
+            节日设置
+          </el-button>
           <el-button size="large" @click="goToTodos">
             <el-icon><List /></el-icon>
             任务列表
@@ -77,14 +81,19 @@
            >
              <!-- 日期数字 -->
              <div class="day-number">
-               <span class="date-number">{{ day.dayNumber }}</span>
+               <span class="date-number" :class="{ 'holiday-date': day.holiday && day.holiday.type === 'legal' }">{{ day.dayNumber }}</span>
                <span v-if="day.lunarDate" class="lunar-date">{{ day.lunarDate }}</span>
+             </div>
+
+             <!-- 节日标识 -->
+             <div v-if="day.holiday" class="holiday-indicator" :class="`holiday-${day.holiday.type}`">
+               <span class="holiday-name">{{ day.holiday.name }}</span>
              </div>
 
              <!-- 事件列表 -->
              <div class="day-events">
                <div
-                 v-for="(event, index) in day.events.slice(0, 3)"
+                 v-for="event in day.events.slice(0, 3)"
                  :key="event.id"
                  class="day-event"
                  :class="getEventClass(event)"
@@ -212,7 +221,7 @@
     <!-- 快速添加对话框 -->
     <el-dialog
       v-model="showQuickAddDialog"
-      title="快速添加任务"
+      :title="editingEvent ? '编辑任务' : '快速添加任务'"
       width="600px"
       :close-on-click-modal="false"
     >
@@ -307,10 +316,13 @@
         </el-form-item>
 
         <el-form-item label="分类">
-          <hover-category-selector
+          <category-cascader
             v-model="quickAddForm.category_id"
             :categories="todoStore.categories"
             placeholder="选择分类"
+            :show-counts="true"
+            :get-todo-count="getCategoryTodoCount"
+            size="default"
           />
         </el-form-item>
 
@@ -326,8 +338,10 @@
 
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showQuickAddDialog = false">取消</el-button>
-          <el-button type="primary" @click="addQuickTask">添加任务</el-button>
+          <el-button @click="cancelQuickAdd">取消</el-button>
+          <el-button type="primary" @click="addQuickTask">
+            {{ editingEvent ? '更新任务' : '添加任务' }}
+          </el-button>
         </span>
       </template>
     </el-dialog>
@@ -335,126 +349,210 @@
     <!-- 事件详情对话框 -->
     <el-dialog
       v-model="showEventDialog"
-      title="任务详情"
-      width="700px"
+      :title="null"
+      width="800px"
+      :show-close="false"
+      class="event-detail-dialog"
     >
-      <div v-if="selectedEvent" class="event-detail">
-        <!-- 任务标题 -->
-        <div class="event-header">
-          <h3>{{ selectedEvent.title }}</h3>
-          <div class="event-actions">
-            <el-button size="small" type="primary" @click="editEvent(selectedEvent)">
+      <div v-if="selectedEvent" class="event-detail-container">
+        <!-- 头部区域 -->
+        <div class="detail-header">
+          <div class="header-left">
+            <div class="task-icon">
+              <el-icon size="28" color="#409eff">
+                <Document />
+              </el-icon>
+            </div>
+            <div class="task-title-area">
+              <h2 class="task-title">{{ selectedEvent.title }}</h2>
+              <div class="task-meta-badges">
+                <el-tag :type="getStatusType(selectedEvent.status)" size="small" round>
+                  {{ getStatusText(selectedEvent.status) }}
+                </el-tag>
+                <el-tag :type="getPriorityType(selectedEvent.priority)" size="small" round>
+                  {{ getPriorityText(selectedEvent.priority) }}
+                </el-tag>
+              </div>
+            </div>
+          </div>
+          <div class="header-actions">
+            <el-button size="default" type="primary" :icon="Edit" @click="editEvent(selectedEvent)">
               编辑
             </el-button>
-            <el-button size="small" type="danger" @click="deleteEvent(selectedEvent)">
+            <el-button size="default" type="danger" :icon="Delete" @click="deleteEvent(selectedEvent)">
               删除
+            </el-button>
+            <el-button size="default" :icon="Close" @click="showEventDialog = false" circle />
+          </div>
+        </div>
+
+        <el-divider />
+
+        <!-- 主要内容区域 -->
+        <div class="detail-content">
+          <el-row :gutter="24">
+            <!-- 左侧信息 -->
+            <el-col :span="16">
+              <!-- 任务描述 -->
+              <div v-if="selectedEvent.description" class="content-section">
+                <div class="section-header">
+                  <el-icon size="18"><Document /></el-icon>
+                  <span class="section-title">任务描述</span>
+                </div>
+                <div class="section-content">
+                  <div class="task-description">{{ selectedEvent.description }}</div>
+                </div>
+              </div>
+
+              <!-- 时间信息 -->
+              <div class="content-section">
+                <div class="section-header">
+                  <el-icon size="18"><Clock /></el-icon>
+                  <span class="section-title">时间安排</span>
+                </div>
+                <div class="section-content">
+                  <div class="time-grid">
+                    <div class="time-card start-time">
+                      <div class="time-card-header">
+                        <el-icon size="16"><VideoPlay /></el-icon>
+                        <span>开始时间</span>
+                      </div>
+                      <div class="time-card-value">
+                        {{ formatEventDateTime(selectedEvent.start_date || selectedEvent.startDate) }}
+                      </div>
+                    </div>
+                    <div class="time-card end-time">
+                      <div class="time-card-header">
+                        <el-icon size="16"><VideoStop /></el-icon>
+                        <span>截止时间</span>
+                      </div>
+                      <div class="time-card-value" :class="{ 'overdue-text': isOverdue(selectedEvent) }">
+                        {{ formatEventDateTime(selectedEvent.due_date || selectedEvent.dueDate) }}
+                      </div>
+                    </div>
+                    <div v-if="selectedEvent.completed_at || selectedEvent.completedAt" class="time-card completed-time">
+                      <div class="time-card-header">
+                        <el-icon size="16"><Check /></el-icon>
+                        <span>完成时间</span>
+                      </div>
+                      <div class="time-card-value">
+                        {{ formatEventDateTime(selectedEvent.completed_at || selectedEvent.completedAt) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 跨天信息 -->
+              <div v-if="isMultiDayEvent(selectedEvent)" class="content-section">
+                <div class="section-header">
+                  <el-icon size="18"><Calendar /></el-icon>
+                  <span class="section-title">跨天任务</span>
+                </div>
+                <div class="section-content">
+                  <div class="multiday-info">
+                    <el-alert
+                      title="跨天任务"
+                      :description="`这是一个跨天任务，持续 ${getEventDuration(selectedEvent)} 天`"
+                      type="info"
+                      :show-icon="true"
+                      :closable="false"
+                    />
+                  </div>
+                </div>
+              </div>
+            </el-col>
+
+            <!-- 右侧信息面板 -->
+            <el-col :span="8">
+              <!-- 工时统计 -->
+              <div v-if="selectedEvent.estimated_hours || selectedEvent.actual_hours" class="content-section">
+                <div class="section-header">
+                  <el-icon size="18"><Timer /></el-icon>
+                  <span class="section-title">工时统计</span>
+                </div>
+                <div class="section-content">
+                  <div class="hours-stats">
+                    <div v-if="selectedEvent.estimated_hours || selectedEvent.estimatedHours" class="stat-card">
+                      <div class="stat-label">预估工时</div>
+                      <div class="stat-value primary">{{ selectedEvent.estimated_hours || selectedEvent.estimatedHours }} 小时</div>
+                    </div>
+                    <div v-if="selectedEvent.actual_hours || selectedEvent.actualHours" class="stat-card">
+                      <div class="stat-label">实际工时</div>
+                      <div class="stat-value success">{{ selectedEvent.actual_hours || selectedEvent.actualHours }} 小时</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 创建信息 -->
+              <div class="content-section">
+                <div class="section-header">
+                  <el-icon size="18"><InfoFilled /></el-icon>
+                  <span class="section-title">创建信息</span>
+                </div>
+                <div class="section-content">
+                  <div class="info-list">
+                    <div class="info-row">
+                      <span class="info-key">创建时间</span>
+                      <span class="info-value">{{ formatEventDateTime(selectedEvent.created_at || selectedEvent.createdAt) }}</span>
+                    </div>
+                    <div v-if="selectedEvent.updated_at || selectedEvent.updatedAt" class="info-row">
+                      <span class="info-key">更新时间</span>
+                      <span class="info-value">{{ formatEventDateTime(selectedEvent.updated_at || selectedEvent.updatedAt) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </el-col>
+          </el-row>
+        </div>
+
+        <!-- 底部操作区域 -->
+        <el-divider />
+        <div class="detail-footer">
+          <div class="action-buttons">
+            <el-button
+              v-if="selectedEvent.status !== 'completed'"
+              size="large"
+              type="success"
+              :icon="Check"
+              @click="completeEvent(selectedEvent)"
+            >
+              标记完成
+            </el-button>
+            <el-button
+              v-if="selectedEvent.status === 'pending'"
+              size="large"
+              type="warning"
+              :icon="VideoPlay"
+              @click="startEvent(selectedEvent)"
+            >
+              开始任务
+            </el-button>
+            <el-button
+              v-if="selectedEvent.status === 'in_progress'"
+              size="large"
+              type="info"
+              :icon="VideoPause"
+              @click="pauseEvent(selectedEvent)"
+            >
+              暂停任务
             </el-button>
           </div>
         </div>
-
-        <!-- 任务描述 -->
-        <div v-if="selectedEvent.description" class="event-section">
-          <h4>任务描述</h4>
-          <p class="event-description">{{ selectedEvent.description }}</p>
-        </div>
-
-        <!-- 任务状态和优先级 -->
-        <div class="event-section">
-          <h4>任务信息</h4>
-          <div class="event-meta">
-            <div class="meta-item">
-              <span class="meta-label">状态:</span>
-              <el-tag :type="getStatusType(selectedEvent.status)" size="small">
-                {{ getStatusText(selectedEvent.status) }}
-              </el-tag>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">优先级:</span>
-              <el-tag :type="getPriorityType(selectedEvent.priority)" size="small">
-                {{ getPriorityText(selectedEvent.priority) }}
-              </el-tag>
-            </div>
-          </div>
-        </div>
-
-        <!-- 时间信息 -->
-        <div class="event-section">
-          <h4>时间信息</h4>
-          <div class="time-info">
-            <div class="time-item">
-              <span class="time-label">开始时间:</span>
-              <span class="time-value">{{ formatEventDateTime(selectedEvent.start_date || selectedEvent.startDate) }}</span>
-            </div>
-            <div class="time-item">
-              <span class="time-label">截止时间:</span>
-              <span class="time-value" :class="{ 'overdue': isOverdue(selectedEvent) }">
-                {{ formatEventDateTime(selectedEvent.due_date || selectedEvent.dueDate) }}
-              </span>
-            </div>
-            <div v-if="selectedEvent.completed_at || selectedEvent.completedAt" class="time-item">
-              <span class="time-label">完成时间:</span>
-              <span class="time-value">{{ formatEventDateTime(selectedEvent.completed_at || selectedEvent.completedAt) }}</span>
-            </div>
-            <div v-if="selectedEvent.estimated_hours || selectedEvent.estimatedHours" class="time-item">
-              <span class="time-label">预估工时:</span>
-              <span class="time-value">{{ selectedEvent.estimated_hours || selectedEvent.estimatedHours }} 小时</span>
-            </div>
-            <div v-if="selectedEvent.actual_hours || selectedEvent.actualHours" class="time-item">
-              <span class="time-label">实际工时:</span>
-              <span class="time-value">{{ selectedEvent.actual_hours || selectedEvent.actualHours }} 小时</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 跨天信息 -->
-        <div v-if="isMultiDayEvent(selectedEvent)" class="event-section">
-          <h4>跨天信息</h4>
-          <div class="multiday-info">
-            <el-icon><Calendar /></el-icon>
-            <span>这是一个跨天任务，持续 {{ getEventDuration(selectedEvent) }} 天</span>
-          </div>
-        </div>
-
-        <!-- 创建信息 -->
-        <div class="event-section">
-          <h4>创建信息</h4>
-          <div class="create-info">
-            <div class="info-item">
-              <span class="info-label">创建时间:</span>
-              <span class="info-value">{{ formatEventDateTime(selectedEvent.created_at || selectedEvent.createdAt) }}</span>
-            </div>
-            <div v-if="selectedEvent.updated_at || selectedEvent.updatedAt" class="info-item">
-              <span class="info-label">更新时间:</span>
-              <span class="info-value">{{ formatEventDateTime(selectedEvent.updated_at || selectedEvent.updatedAt) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 操作按钮 -->
-        <div class="event-actions-bottom">
-          <el-button
-            v-if="selectedEvent.status !== 'completed'"
-            type="success"
-            @click="completeEvent(selectedEvent)"
-          >
-            标记完成
-          </el-button>
-          <el-button
-            v-if="selectedEvent.status === 'pending'"
-            type="warning"
-            @click="startEvent(selectedEvent)"
-          >
-            开始任务
-          </el-button>
-          <el-button
-            v-if="selectedEvent.status === 'in_progress'"
-            type="info"
-            @click="pauseEvent(selectedEvent)"
-          >
-            暂停任务
-          </el-button>
-        </div>
       </div>
+    </el-dialog>
+
+    <!-- 节日设置对话框 -->
+    <el-dialog
+      v-model="showHolidaySettings"
+      title="节日订阅设置"
+      width="900px"
+      :show-close="true"
+      :modal="true"
+    >
+      <HolidaySettings ref="holidaySettingsRef" />
     </el-dialog>
   </div>
 </template>
@@ -464,8 +562,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTodoStore } from '@/stores/todo'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, ArrowLeft, ArrowRight, Calendar, List } from '@element-plus/icons-vue'
-import HoverCategorySelector from '@/components/common/HoverCategorySelector.vue'
+import { 
+  Plus, ArrowLeft, ArrowRight, Calendar, List, 
+  Document, Edit, Delete, Clock, VideoPlay, 
+  VideoPause, Check, Timer, InfoFilled, Close
+} from '@element-plus/icons-vue'
+import CategoryCascader from '@/components/common/CategoryCascader.vue'
+import HolidaySettings from '../components/HolidaySettings.vue'
+import { holidayManager } from '../utils/holidaySubscription.js'
 
 const router = useRouter()
 const todoStore = useTodoStore()
@@ -476,7 +580,10 @@ const selectedDate = ref(new Date())
 const viewMode = ref('month') // 'month', 'week', 'day'
 const showQuickAddDialog = ref(false)
 const showEventDialog = ref(false)
+const showHolidaySettings = ref(false)
 const selectedEvent = ref(null)
+const editingEvent = ref(null)
+const allHolidays = ref([])
 
 // 快速添加表单
 // 时间预设
@@ -528,14 +635,6 @@ const currentMonthYear = computed(() => {
   return ''
 })
 
-const selectedDateFormatted = computed(() => {
-  return selectedDate.value.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long'
-  })
-})
 
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
@@ -545,6 +644,11 @@ const getLocalDateString = (date) => {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+// 获取分类任务数量
+const getCategoryTodoCount = (categoryId) => {
+  return todoStore.todos.filter(todo => todo.category_id === categoryId).length
 }
 
 const calendarDays = computed(() => {
@@ -563,6 +667,7 @@ const calendarDays = computed(() => {
 
     const dayEvents = getEventsForDate(date)
     const isWeekend = date.getDay() === 0 || date.getDay() === 6
+    const holiday = holidayManager.getHolidayInfo(date, allHolidays.value)
 
     days.push({
       date: getLocalDateString(date),
@@ -572,16 +677,14 @@ const calendarDays = computed(() => {
       isToday: getLocalDateString(date) === getLocalDateString(today),
       isSelected: getLocalDateString(date) === getLocalDateString(selectedDate.value),
       isWeekend: isWeekend,
-      events: dayEvents
+      events: dayEvents,
+      holiday: holiday
     })
   }
 
   return days
 })
 
-const selectedDateEvents = computed(() => {
-  return getEventsForDate(selectedDate.value)
-})
 
 // 周视图数据
 const weekDays = computed(() => {
@@ -822,8 +925,101 @@ const getEventDuration = (event) => {
 
 // 事件操作函数
 const editEvent = (event) => {
-  // TODO: 实现编辑功能
-  ElMessage.info('编辑功能开发中...')
+  // 填充表单数据
+  const startTime = event.start || event.start_date
+  const endTime = event.end || event.due_date
+  
+  if (startTime && endTime) {
+    console.log('日历编辑 - 原始时间数据:', {
+      start: event.start,
+      end: event.end,
+      start_date: event.start_date,
+      due_date: event.due_date,
+      startTime: startTime,
+      endTime: endTime,
+      event: event
+    })
+    
+    // 将UTC时间转换为本地时间进行编辑
+    const startDate = new Date(startTime)
+    const endDate = new Date(endTime)
+    
+    // 获取本地时间的各个组件
+    const startHour = startDate.getHours()
+    const startMinute = startDate.getMinutes()
+    const endHour = endDate.getHours()
+    const endMinute = endDate.getMinutes()
+    
+    console.log('日历编辑 - 本地时间解析后:', {
+      startTime: `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`,
+      endTime: `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`
+    })
+    
+    // 检查是否为全天任务（检查时间差是否接近24小时）
+    const timeDiffMs = endDate.getTime() - startDate.getTime()
+    const timeDiffHours = timeDiffMs / (1000 * 60 * 60)
+    
+    if (Math.abs(timeDiffHours - 24) < 0.1) { // 允许小的误差
+      // 全天任务
+      const year = startDate.getFullYear()
+      const month = (startDate.getMonth() + 1).toString().padStart(2, '0')
+      const day = startDate.getDate().toString().padStart(2, '0')
+      
+      quickAddForm.value = {
+        title: event.title || '',
+        description: event.description || '',
+        priority: event.priority || 'medium',
+        category: event.category_id || null,
+        isAllDay: true,
+        startDate: `${year}-${month}-${day}`,
+        endDate: '',
+        startTime: '09:00',
+        endTime: '10:00',
+        estimatedHours: event.estimated_hours || 0
+      }
+    } else {
+      // 非全天任务
+      const startYear = startDate.getFullYear()
+      const startMonth = (startDate.getMonth() + 1).toString().padStart(2, '0')
+      const startDay = startDate.getDate().toString().padStart(2, '0')
+      const endYear = endDate.getFullYear()
+      const endMonth = (endDate.getMonth() + 1).toString().padStart(2, '0')
+      const endDay = endDate.getDate().toString().padStart(2, '0')
+      
+      quickAddForm.value = {
+        title: event.title || '',
+        description: event.description || '',
+        priority: event.priority || 'medium',
+        category: event.category_id || null,
+        isAllDay: false,
+        startDate: `${startYear}-${startMonth}-${startDay}`,
+        endDate: `${endYear}-${endMonth}-${endDay}`,
+        startTime: `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`,
+        endTime: `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`,
+        estimatedHours: event.estimated_hours || 0
+      }
+      
+      console.log('日历编辑 - 设置表单数据:', quickAddForm.value)
+    }
+  } else {
+    // 如果没有时间信息，设置默认值
+    quickAddForm.value = {
+      title: event.title || '',
+      description: event.description || '',
+      priority: event.priority || 'medium',
+      category: event.category_id || null,
+      isAllDay: false,
+      startDate: '',
+      endDate: '',
+      startTime: '09:00',
+      endTime: '10:00',
+      estimatedHours: event.estimated_hours || 0
+    }
+  }
+  
+  // 设置编辑模式
+  editingEvent.value = event
+  showQuickAddDialog.value = true
 }
 
 const deleteEvent = async (event) => {
@@ -894,6 +1090,25 @@ const getEventsForTimeSlot = (day, hour) => {
   })
 }
 
+const cancelQuickAdd = () => {
+  editingEvent.value = null
+  showQuickAddDialog.value = false
+  
+  // 重置表单
+  quickAddForm.value = {
+    title: '',
+    startDate: '',
+    endDate: '',
+    startTime: '09:00',
+    endTime: '10:00',
+    isAllDay: false,
+    priority: 'medium',
+    description: '',
+    category: null,
+    estimatedHours: 0
+  }
+}
+
 const addQuickTask = async () => {
   if (!quickAddForm.value.title.trim()) {
     ElMessage.warning('请输入任务标题')
@@ -958,14 +1173,23 @@ const addQuickTask = async () => {
       due_date: dueDate
     }
 
-    await todoStore.createTodo(taskData)
-    ElMessage.success('任务添加成功')
+    if (editingEvent.value) {
+      // 编辑模式：更新现有任务
+      await todoStore.updateTodo(editingEvent.value.id, taskData)
+      ElMessage.success('任务更新成功')
+    } else {
+      // 新增模式：创建新任务
+      await todoStore.createTodo(taskData)
+      ElMessage.success('任务添加成功')
+    }
+    
     showQuickAddDialog.value = false
 
     // 重新获取任务列表以更新日历显示
     await todoStore.fetchTodos()
 
-    // 重置表单
+    // 重置表单和编辑状态
+    editingEvent.value = null
     quickAddForm.value = {
       title: '',
       startDate: '',
@@ -1119,12 +1343,21 @@ const getStatusText = (status) => {
   return textMap[status] || '未知'
 }
 
-
+// 加载节日数据
+const loadHolidays = async () => {
+  try {
+    allHolidays.value = await holidayManager.getAllHolidays()
+    console.log('加载了节日数据:', allHolidays.value.length, '个节日')
+  } catch (error) {
+    console.error('加载节日数据失败:', error)
+  }
+}
 
 // 生命周期
 onMounted(async () => {
   await todoStore.fetchTodos()
   await todoStore.fetchCategories()
+  await loadHolidays()
 })
 </script>
 
@@ -2109,5 +2342,431 @@ onMounted(async () => {
   background: rgba(103, 194, 58, 0.3) !important;
   color: #67c23a !important;
   border: 1px solid rgba(103, 194, 58, 0.5) !important;
+}
+
+/* 任务详情对话框样式 */
+.task-detail-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.task-detail-dialog :deep(.el-dialog__header) {
+  padding: 0;
+  margin: 0;
+}
+
+.task-detail-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.detail-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px;
+  position: relative;
+}
+
+.detail-header-content {
+  position: relative;
+}
+
+.detail-title-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.task-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.title-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+  word-break: break-word;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.task-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.pending {
+  background: rgba(230, 162, 60, 0.2);
+  color: #e6a23c;
+  border: 1px solid rgba(230, 162, 60, 0.3);
+}
+
+.status-badge.in_progress {
+  background: rgba(64, 158, 255, 0.2);
+  color: #409eff;
+  border: 1px solid rgba(64, 158, 255, 0.3);
+}
+
+.status-badge.completed {
+  background: rgba(103, 194, 58, 0.2);
+  color: #67c23a;
+  border: 1px solid rgba(103, 194, 58, 0.3);
+}
+
+.priority-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.priority-badge.urgent {
+  background: rgba(245, 108, 108, 0.2);
+  color: #f56c6c;
+  border: 1px solid rgba(245, 108, 108, 0.3);
+}
+
+.priority-badge.high {
+  background: rgba(230, 162, 60, 0.2);
+  color: #e6a23c;
+  border: 1px solid rgba(230, 162, 60, 0.3);
+}
+
+.priority-badge.medium {
+  background: rgba(64, 158, 255, 0.2);
+  color: #409eff;
+  border: 1px solid rgba(64, 158, 255, 0.3);
+}
+
+.priority-badge.low {
+  background: rgba(103, 194, 58, 0.2);
+  color: #67c23a;
+  border: 1px solid rgba(103, 194, 58, 0.3);
+}
+
+.detail-header .header-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.detail-header .header-actions .el-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.detail-header .header-actions .el-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.detail-content {
+  padding: 24px;
+}
+
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 769px) {
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+}
+
+.detail-section {
+  background: #f8f9ff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e8eaff;
+}
+
+.detail-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-icon {
+  width: 20px;
+  height: 20px;
+  color: #667eea;
+}
+
+.description-text {
+  color: #606266;
+  line-height: 1.6;
+  font-size: 14px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.empty-description {
+  color: #c0c4cc;
+  font-style: italic;
+}
+
+.time-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.time-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 4px solid #667eea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.time-card.overdue {
+  border-left-color: #f56c6c;
+  background: #fef6f6;
+}
+
+.time-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #909399;
+  letter-spacing: 0.5px;
+}
+
+.time-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.time-value.overdue {
+  color: #f56c6c;
+  font-weight: 600;
+}
+
+.work-time-stats {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.work-hours {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.work-label {
+  font-size: 14px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.meta-item:last-child {
+  border-bottom: none;
+}
+
+.meta-label {
+  font-size: 13px;
+  color: #909399;
+  font-weight: 500;
+}
+
+.meta-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.detail-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.action-buttons .el-button {
+  min-width: 120px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.action-buttons .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 动画效果 */
+.task-detail-dialog :deep(.el-dialog) {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-header {
+  animation: fadeInDown 0.4s ease-out;
+}
+
+.detail-content {
+  animation: fadeInUp 0.4s ease-out 0.1s both;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 节日样式 */
+.holiday-date {
+  color: #f56c6c !important;
+  font-weight: 600 !important;
+}
+
+.holiday-indicator {
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.holiday-legal {
+  background: linear-gradient(135deg, #f56c6c, #f78989);
+  color: white;
+  box-shadow: 0 1px 3px rgba(245, 108, 108, 0.3);
+}
+
+.holiday-workday {
+  background: linear-gradient(135deg, #e6a23c, #eab563);
+  color: white;
+  box-shadow: 0 1px 3px rgba(230, 162, 60, 0.3);
+}
+
+.holiday-traditional {
+  background: linear-gradient(135deg, #909399, #a6a9ad);
+  color: white;
+  box-shadow: 0 1px 3px rgba(144, 147, 153, 0.3);
+}
+
+.holiday-icon {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.holiday-name {
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50px;
+}
+
+/* 节日日期特殊边框样式 */
+.calendar-day:has(.holiday-legal) {
+  border: 2px solid #f56c6c !important;
+  background: linear-gradient(135deg, #fef0f0, #fff);
+}
+
+.calendar-day:has(.holiday-workday) {
+  border: 2px solid #e6a23c !important;
+  background: linear-gradient(135deg, #fdf6ec, #fff);
 }
 </style>

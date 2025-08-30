@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -96,7 +97,12 @@ func (dm *DatabaseManager) connect() error {
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},
-		Logger: gormLogger.Default.LogMode(logLevel),
+		Logger: gormLogger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags), // io.Writer
+			gormLogger.Config{
+				LogLevel: logLevel, // Log level Info will output everything, including SQL
+				Colorful: true,     // Enable colorized output
+			}),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
@@ -211,6 +217,7 @@ func (dm *DatabaseManager) AutoMigrate() error {
 		&models.Todo{},
 		&models.Notification{},
 		&models.Article{},
+		&models.ArticleLike{},
 		&models.Category{},
 	); err != nil {
 		return fmt.Errorf("auto migrate failed: %w", err)

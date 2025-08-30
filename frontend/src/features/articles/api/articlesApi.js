@@ -127,7 +127,7 @@ export const articlesApi = {
    * @returns {Promise} 更新结果
    */
   incrementViewCount(articleId) {
-    return api.post(`/articles/${articleId}/view`)
+    return api.post(`/articles/${articleId}/view`, {})
   },
 
   /**
@@ -136,7 +136,7 @@ export const articlesApi = {
    * @returns {Promise} 点赞结果
    */
   likeArticle(articleId) {
-    return api.post(`/articles/${articleId}/like`)
+    return api.post(`/articles/${articleId}/like`, {})
   },
 
   /**

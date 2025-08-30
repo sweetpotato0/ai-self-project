@@ -133,9 +133,15 @@ func (s *ArticleService) GetUserArticles(userID uint, filter *ArticleFilter) (*P
 // GetArticleByID 根据ID获取文章
 func (s *ArticleService) GetArticleByID(id uint, userID uint) (*models.Article, error) {
 	var article models.Article
-	if err := s.db.Where("id = ? AND created_by = ?", id, userID).First(&article).Error; err != nil {
+	if err := s.db.Where("id = ?", id).First(&article).Error; err != nil {
 		return nil, fmt.Errorf("article not found: %v", err)
 	}
+
+	// 检查当前用户是否点赞过这篇文章
+	var likeCount int64
+	s.db.Model(&models.ArticleLike{}).Where("article_id = ? AND user_id = ?", id, userID).Count(&likeCount)
+	article.IsLikedByUser = likeCount > 0
+
 	return &article, nil
 }
 
@@ -211,12 +217,67 @@ func (s *ArticleService) IncrementViewCount(id uint) error {
 
 // LikeArticle 点赞文章
 func (s *ArticleService) LikeArticle(id uint, userID uint) error {
-	return s.db.Model(&models.Article{}).Where("id = ?", id).Update("like_count", gorm.Expr("like_count + 1")).Error
+	// 检查是否已经点赞（仅查询未删除的记录）
+	var existingLike models.ArticleLike
+	if err := s.db.Where("article_id = ? AND user_id = ?", id, userID).First(&existingLike).Error; err == nil {
+		// 记录存在且未删除，已经点赞过了
+		s.logger.Debugf("User %d has already liked article %d", userID, id)
+		return fmt.Errorf("already liked")
+	}
+
+	// 开始事务
+	tx := s.db.Begin()
+
+	// 硬删除任何可能存在的软删除记录
+	tx.Unscoped().Where("article_id = ? AND user_id = ?", id, userID).Delete(&models.ArticleLike{})
+
+	// 创建新的点赞记录
+	s.logger.Debugf("Creating new like record for user %d and article %d", userID, id)
+	like := models.ArticleLike{
+		ArticleID: id,
+		UserID:    userID,
+	}
+	if err := tx.Create(&like).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to create like record: %v", err)
+	}
+
+	// 更新文章点赞数
+	if err := tx.Model(&models.Article{}).Where("id = ?", id).Update("like_count", gorm.Expr("like_count + 1")).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update like count: %v", err)
+	}
+
+	return tx.Commit().Error
 }
 
 // UnlikeArticle 取消点赞文章
 func (s *ArticleService) UnlikeArticle(id uint, userID uint) error {
-	return s.db.Model(&models.Article{}).Where("id = ?", id).Update("like_count", gorm.Expr("like_count - 1")).Error
+	// 检查是否存在点赞记录
+	var existingLike models.ArticleLike
+	if err := s.db.Where("article_id = ? AND user_id = ?", id, userID).First(&existingLike).Error; err != nil {
+		// 没有点赞记录，不做任何操作
+		s.logger.Debugf("No like record found for user %d and article %d", userID, id)
+		return nil
+	}
+
+	// 开始事务
+	tx := s.db.Begin()
+
+	// 硬删除点赞记录
+	if err := tx.Unscoped().Delete(&existingLike).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete like record: %v", err)
+	}
+
+	// 更新文章点赞数
+	if err := tx.Model(&models.Article{}).Where("id = ?", id).Update("like_count", gorm.Expr("like_count - 1")).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update like count: %v", err)
+	}
+
+	s.logger.Debugf("Successfully unliked article %d for user %d", id, userID)
+	return tx.Commit().Error
 }
 
 // UpdateArticle 更新文章
