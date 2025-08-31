@@ -19,9 +19,10 @@
           </el-form-item>
 
           <el-form-item label="文章内容" prop="content">
-            <EnhancedEditor
+            <MarkdownEditor
               v-model="form.content"
-              placeholder="请输入文章内容，支持富文本编辑"
+              placeholder="请使用 Markdown 语法编写你的专业文章..."
+              height="600px"
             />
           </el-form-item>
         </el-col>
@@ -84,7 +85,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useArticleStore } from '@/stores/article'
 import { ElMessage } from 'element-plus'
-import EnhancedEditor from '@/components/editor/EnhancedEditor.vue'
+import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
 
 const props = defineProps({
   modelValue: {
@@ -143,6 +144,24 @@ const dialogVisible = computed({
 
 const isEdit = computed(() => !!props.article)
 
+// 方法
+const resetForm = () => {
+  // 重置表单数据
+  Object.assign(form, {
+    title: '',
+    content: '',
+    summary: '',
+    cover_image: '',
+    status: 'draft',
+    tags: []
+  })
+  
+  // 重置表单验证状态
+  if (formRef.value) {
+    formRef.value.resetFields()
+  }
+}
+
 // 监听文章变化，填充表单
 watch(() => props.article, (newArticle) => {
   if (newArticle) {
@@ -163,20 +182,21 @@ watch(() => props.article, (newArticle) => {
       form.tags = []
     }
   } else {
-    // 重置表单
-    Object.assign(form, {
-      title: '',
-      content: '',
-      summary: '',
-      cover_image: '',
-      status: 'draft',
-      tags: []
-    })
+    // 新建文章时重置表单
+    resetForm()
   }
 }, { immediate: true })
 
-// 方法
+// 监听对话框打开状态，确保新建时表单被重置
+watch(() => props.modelValue, (newValue) => {
+  if (newValue && !props.article) {
+    // 对话框打开且没有编辑文章时，重置表单
+    resetForm()
+  }
+})
+
 const handleClose = () => {
+  resetForm()
   dialogVisible.value = false
 }
 
@@ -203,7 +223,8 @@ const handleSubmit = async () => {
     }
 
     emit('success')
-    handleClose()
+    resetForm()
+    dialogVisible.value = false
   } catch (error) {
     console.error('提交失败:', error)
     ElMessage.error(isEdit.value ? '更新失败' : '创建失败')

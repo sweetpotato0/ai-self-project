@@ -66,23 +66,52 @@
 
     <!-- 筛选和搜索 -->
     <div class="filter-section">
-      <div class="filter-left">
-        <el-select v-model="filterStatus" placeholder="状态筛选" clearable @change="handleFilterChange">
-          <el-option label="全部" value="" />
-          <el-option label="已发布" value="published" />
-          <el-option label="草稿" value="draft" />
-          <el-option label="已归档" value="archived" />
-        </el-select>
-      </div>
-      <div class="filter-right">
-        <el-input
-          v-model="searchKeyword"
-          placeholder="搜索文章标题..."
-          prefix-icon="Search"
-          clearable
-          @input="handleSearch"
-          style="width: 300px"
-        />
+      <div class="filter-row">
+        <div class="filter-left">
+          <el-select v-model="filterStatus" placeholder="状态筛选" clearable @change="handleFilterChange" style="width: 120px;">
+            <el-option label="全部状态" value="" />
+            <el-option label="已发布" value="published" />
+            <el-option label="草稿" value="draft" />
+            <el-option label="已归档" value="archived" />
+          </el-select>
+          
+          <el-select v-model="filterTag" placeholder="标签筛选" clearable @change="handleFilterChange" style="width: 140px;">
+            <el-option label="全部标签" value="" />
+            <el-option
+              v-for="tag in availableTags"
+              :key="tag"
+              :label="tag"
+              :value="tag"
+            />
+          </el-select>
+          
+          <el-select v-model="sortBy" @change="handleSortChange" style="width: 140px;">
+            <el-option label="最新创建" value="created_at:desc" />
+            <el-option label="最早创建" value="created_at:asc" />
+            <el-option label="最新更新" value="updated_at:desc" />
+            <el-option label="最多浏览" value="view_count:desc" />
+            <el-option label="最多点赞" value="like_count:desc" />
+            <el-option label="标题排序" value="title:asc" />
+          </el-select>
+        </div>
+        
+        <div class="filter-right">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索文章标题、内容..."
+            prefix-icon="Search"
+            clearable
+            @keyup.enter="handleSearch"
+            @clear="handleSearchClear"
+            style="width: 280px; margin-right: 10px;"
+          />
+          <el-button type="primary" @click="handleSearch" :loading="searchLoading">
+            搜索
+          </el-button>
+          <el-button @click="handleResetFilters">
+            重置
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -112,7 +141,7 @@
           </div>
           <div class="article-content">
             <h3 class="article-title">{{ article.title }}</h3>
-            <p class="article-summary">{{ article.summary || '暂无摘要' }}</p>
+            <p class="article-summary">{{ getArticleSummary(article) }}</p>
             <div class="article-meta">
               <el-tag :type="getStatusType(article.status)" size="small">
                 {{ getStatusText(article.status) }}
@@ -180,51 +209,100 @@ const articleStore = useArticleStore()
 const showCreateDialog = ref(false)
 const currentArticle = ref(null)
 const filterStatus = ref('')
+const filterTag = ref('')
+const sortBy = ref('created_at:desc')
 const searchKeyword = ref('')
+const searchLoading = ref(false)
+const availableTags = ref([])
 
 // 统计数据
 const stats = computed(() => articleStore.stats)
 
-// 过滤后的文章列表
+// 过滤后的文章列表（现在主要由后端处理）
 const filteredArticles = computed(() => {
-  let articles = articleStore.articles || []
-
-  // 状态筛选
-  if (filterStatus.value) {
-    articles = articles.filter(article => article.status === filterStatus.value)
-  }
-
-  // 关键词搜索
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    articles = articles.filter(article =>
-      article.title.toLowerCase().includes(keyword) ||
-      (article.summary && article.summary.toLowerCase().includes(keyword))
-    )
-  }
-
-  return articles
+  return articleStore.articles || []
 })
 
 // 方法
 const loadData = async () => {
   try {
+    const params = {
+      status: filterStatus.value,
+      tag: filterTag.value,
+      sort: sortBy.value,
+      search: searchKeyword.value
+    }
+    
     await Promise.all([
-      articleStore.fetchArticles(),
-      articleStore.fetchStats()
+      articleStore.fetchArticles(params),
+      articleStore.fetchStats(),
+      loadAvailableTags()
     ])
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
 }
 
+const loadAvailableTags = async () => {
+  try {
+    // 从文章中提取所有可用标签
+    const allTags = new Set()
+    articleStore.articles?.forEach(article => {
+      if (article.tags) {
+        try {
+          const tags = JSON.parse(article.tags)
+          if (Array.isArray(tags)) {
+            tags.forEach(tag => allTags.add(tag))
+          }
+        } catch (e) {
+          // 忽略解析错误
+        }
+      }
+    })
+    availableTags.value = Array.from(allTags).sort()
+  } catch (error) {
+    console.error('加载标签失败:', error)
+  }
+}
+
 const handleFilterChange = () => {
   // 筛选改变时重新加载数据
+  articleStore.page = 1 // 重置到第一页
   loadData()
 }
 
-const handleSearch = () => {
-  // 搜索时不需要重新加载数据，使用本地过滤
+const handleSortChange = () => {
+  // 排序改变时重新加载数据
+  articleStore.page = 1 // 重置到第一页
+  loadData()
+}
+
+const handleSearch = async () => {
+  if (searchLoading.value) return
+  
+  try {
+    searchLoading.value = true
+    articleStore.page = 1 // 重置到第一页
+    await loadData()
+  } catch (error) {
+    ElMessage.error('搜索失败')
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+const handleSearchClear = () => {
+  searchKeyword.value = ''
+  loadData()
+}
+
+const handleResetFilters = () => {
+  filterStatus.value = ''
+  filterTag.value = ''
+  sortBy.value = 'created_at:desc'
+  searchKeyword.value = ''
+  articleStore.page = 1
+  loadData()
 }
 
 const handleSizeChange = (size) => {
@@ -296,6 +374,43 @@ const formatDate = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString)
   return date.toLocaleDateString('zh-CN')
+}
+
+const getArticleSummary = (article) => {
+  if (article.summary && article.summary.trim()) {
+    return article.summary
+  }
+  
+  if (article.content && article.content.trim()) {
+    // 去除 Markdown 格式标记
+    let plainText = article.content
+      // 去除标题标记
+      .replace(/#{1,6}\s+/g, '')
+      // 去除粗体和斜体
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      // 去除代码块
+      .replace(/```[\s\S]*?```/g, '')
+      // 去除行内代码
+      .replace(/`([^`]+)`/g, '$1')
+      // 去除链接
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // 去除图片
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')
+      // 去除换行符和多余空格
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    
+    // 截取前80个字符
+    if (plainText.length > 80) {
+      return plainText.substring(0, 80) + '...'
+    }
+    
+    return plainText || '暂无摘要'
+  }
+  
+  return '暂无摘要'
 }
 
 // 生命周期
@@ -400,13 +515,30 @@ onMounted(() => {
 
 /* 筛选和搜索 */
 .filter-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 20px;
   padding: 20px;
   background: #f8f9fa;
   border-radius: 12px;
+}
+
+.filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+
+.filter-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* 文章列表 */
@@ -433,9 +565,49 @@ onMounted(() => {
 }
 
 .articles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.articles-grid .article-card {
+  flex: 0 0 calc(20% - 13px);
+  max-width: calc(20% - 13px);
+  min-width: 240px;
+}
+
+/* 当空间不足以放置5列时，自动调整为4列 */
+@media (max-width: 1600px) {
+  .articles-grid .article-card {
+    flex: 0 0 calc(25% - 12px);
+    max-width: calc(25% - 12px);
+  }
+}
+
+/* 当空间不足以放置4列时，自动调整为3列 */
+@media (max-width: 1200px) {
+  .articles-grid .article-card {
+    flex: 0 0 calc(33.333% - 11px);
+    max-width: calc(33.333% - 11px);
+  }
+}
+
+/* 当空间不足以放置3列时，自动调整为2列 */
+@media (max-width: 900px) {
+  .articles-grid .article-card {
+    flex: 0 0 calc(50% - 8px);
+    max-width: calc(50% - 8px);
+  }
+}
+
+/* 当空间不足以放置2列时，自动调整为1列 */
+@media (max-width: 800px) {
+  .articles-grid .article-card {
+    flex: 0 0 100%;
+    max-width: 100%;
+    min-width: unset;
+  }
 }
 
 .article-card {
@@ -453,7 +625,7 @@ onMounted(() => {
 }
 
 .article-cover {
-  height: 200px;
+  height: 120px;
   overflow: hidden;
   border-radius: 8px 8px 0 0;
 }
@@ -465,22 +637,22 @@ onMounted(() => {
 }
 
 .article-content {
-  padding: 20px;
+  padding: 15px;
 }
 
 .article-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   color: #333;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .article-summary {
   color: #666;
-  font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 15px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 10px 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -491,7 +663,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .article-date {
@@ -502,7 +674,7 @@ onMounted(() => {
 .article-stats {
   display: flex;
   gap: 15px;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .stat-item {
@@ -515,8 +687,8 @@ onMounted(() => {
 
 .article-actions {
   display: flex;
-  gap: 10px;
-  padding: 0 20px 20px;
+  gap: 8px;
+  padding: 0 15px 15px;
 }
 
 /* 分页 */
@@ -543,8 +715,21 @@ onMounted(() => {
   }
 
   .filter-section {
+    padding: 15px;
+  }
+
+  .filter-row {
     flex-direction: column;
     gap: 15px;
+    align-items: stretch;
+  }
+
+  .filter-left {
+    justify-content: center;
+  }
+
+  .filter-right {
+    justify-content: center;
   }
 
   .articles-grid {

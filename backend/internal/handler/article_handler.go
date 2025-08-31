@@ -5,6 +5,7 @@ import (
 	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,24 +43,51 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 // GetUserArticles 获取用户文章列表
 func (h *ArticleHandler) GetUserArticles(c *gin.Context) {
 	userID := getUserIDFromContext(c)
+	h.logger.Debugf("GetUserArticles called for user %d", userID)
 
-	// 获取查询参数
+	// 获取查询参数并记录日志
 	status := c.Query("status")
+	search := c.Query("search")
+	tag := c.Query("tag")
+	sortBy := c.DefaultQuery("sort_by", "created_at")
+	sortOrder := c.DefaultQuery("sort_order", "desc")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
-	filter := &service.ArticleFilter{
-		Status: status,
-		Page:   page,
-		Limit:  limit,
+	h.logger.Debugf("Raw query params - status: '%s', search: '%s', tag: '%s', sort_by: '%s', sort_order: '%s', page: %d, limit: %d",
+		status, search, tag, sortBy, sortOrder, page, limit)
+
+	// 解析前端传来的sort参数（格式：field:direction）
+	sortParam := c.Query("sort")
+	if sortParam != "" {
+		parts := strings.Split(sortParam, ":")
+		if len(parts) == 2 {
+			sortBy = parts[0]
+			sortOrder = parts[1]
+			h.logger.Debugf("Parsed sort param: sortBy='%s', sortOrder='%s'", sortBy, sortOrder)
+		}
 	}
+
+	filter := &service.ArticleFilter{
+		Status:    status,
+		Search:    search,
+		Tags:      tag,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Page:      page,
+		Limit:     limit,
+	}
+
+	h.logger.Debugf("Filter object: %+v", filter)
 
 	result, err := h.articleService.GetUserArticles(userID, filter)
 	if err != nil {
+		h.logger.Errorf("Failed to get articles: %v", err)
 		response.InternalServerError(c, "Failed to get articles")
 		return
 	}
 
+	h.logger.Debugf("Retrieved %d articles out of %d total", len(result.Articles), result.Total)
 	response.Success(c, result)
 }
 

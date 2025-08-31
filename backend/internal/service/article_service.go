@@ -46,6 +46,7 @@ type ArticleFilter struct {
 	Status      string `json:"status"`
 	IsPublished *bool  `json:"is_published"`
 	Search      string `json:"search"`
+	Tags        string `json:"tags"`
 	Page        int    `json:"page"`
 	Limit       int    `json:"limit"`
 	SortBy      string `json:"sort_by"`
@@ -92,32 +93,71 @@ func (s *ArticleService) GetUserArticles(userID uint, filter *ArticleFilter) (*P
 	var articles []*models.Article
 	var total int64
 
+	s.logger.Debugf("GetUserArticles service called for user %d with filter: %+v", userID, filter)
+
 	query := s.db.Where("created_by = ?", userID)
 
 	if filter.Status != "" {
+		s.logger.Debugf("Applying status filter: %s", filter.Status)
 		query = query.Where("status = ?", filter.Status)
 	}
 	if filter.IsPublished != nil {
+		s.logger.Debugf("Applying published filter: %v", *filter.IsPublished)
 		query = query.Where("status = ?", "published")
 	}
 	if filter.Search != "" {
+		s.logger.Debugf("Applying search filter: %s", filter.Search)
 		query = query.Where("title LIKE ? OR content LIKE ?", "%"+filter.Search+"%", "%"+filter.Search+"%")
+	}
+	if filter.Tags != "" {
+		s.logger.Debugf("Applying tags filter: %s", filter.Tags)
+		query = query.Where("tags LIKE ?", "%\""+filter.Tags+"\"%")
 	}
 
 	// 获取总数
 	if err := query.Model(&models.Article{}).Count(&total).Error; err != nil {
+		s.logger.Errorf("Failed to count articles: %v", err)
 		return nil, fmt.Errorf("failed to count articles: %v", err)
+	}
+	s.logger.Debugf("Total articles count: %d", total)
+
+	// 构建排序字符串
+	orderBy := "created_at DESC" // 默认排序
+	if filter.SortBy != "" {
+		// 验证排序字段
+		validSortFields := map[string]bool{
+			"created_at":  true,
+			"updated_at":  true,
+			"title":       true,
+			"view_count":  true,
+			"like_count":  true,
+		}
+		if validSortFields[filter.SortBy] {
+			direction := "DESC"
+			if filter.SortOrder == "asc" {
+				direction = "ASC"
+			}
+			orderBy = filter.SortBy + " " + direction
+			s.logger.Debugf("Applied custom sort: %s", orderBy)
+		} else {
+			s.logger.Debugf("Invalid sort field '%s', using default sort", filter.SortBy)
+		}
 	}
 
 	// 分页查询
 	offset := (filter.Page - 1) * filter.Limit
+	s.logger.Debugf("Query with offset: %d, limit: %d, order: %s", offset, filter.Limit, orderBy)
+	
 	if err := query.Preload("User").
-		Order("created_at DESC").
+		Order(orderBy).
 		Offset(offset).
 		Limit(filter.Limit).
 		Find(&articles).Error; err != nil {
+		s.logger.Errorf("Failed to get articles: %v", err)
 		return nil, fmt.Errorf("failed to get articles: %v", err)
 	}
+
+	s.logger.Debugf("Retrieved %d articles from database", len(articles))
 
 	totalPages := int((total + int64(filter.Limit) - 1) / int64(filter.Limit))
 

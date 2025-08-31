@@ -2,14 +2,19 @@
   <div class="article-detail-container">
     <!-- 返回按钮 -->
     <div class="back-section">
-      <el-button @click="goBack" type="text">
-        <el-icon><ArrowLeft /></el-icon>
-        返回文章列表
-      </el-button>
+      <div class="back-button" @click="goBack">
+        <div class="back-icon">
+          <el-icon><ArrowLeft /></el-icon>
+        </div>
+        <div class="back-content">
+          <span class="back-text">返回</span>
+          <span class="back-subtext">文章列表</span>
+        </div>
+      </div>
     </div>
 
     <!-- 调试信息 -->
-    <div v-if="isDev" class="debug-info">
+    <!-- <div v-if="isDev" class="debug-info">
       <h3>调试信息</h3>
       <p>路由参数: {{ route.params }}</p>
       <p>文章ID: {{ route.params.id }}</p>
@@ -20,7 +25,7 @@
       <p>文章数据: {{ article ? '已加载' : '未加载' }}</p>
       <p>文章内容长度: {{ article?.content?.length || 0 }}</p>
       <p>当前路由名称: {{ route.name }}</p>
-    </div>
+    </div> -->
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
@@ -80,8 +85,34 @@
         </div>
       </div>
 
+      <!-- 阅读设置 -->
+      <div class="reading-controls">
+        <el-button-group>
+          <el-button
+            :type="isWideMode ? '' : 'primary'"
+            @click="isWideMode = false"
+            size="small"
+          >
+            <el-icon><Monitor /></el-icon>
+            标准模式
+          </el-button>
+          <el-button
+            :type="isWideMode ? 'primary' : ''"
+            @click="isWideMode = true"
+            size="small"
+          >
+            <el-icon><FullScreen /></el-icon>
+            宽屏模式
+          </el-button>
+        </el-button-group>
+        <el-button @click="showToc = !showToc" size="small">
+          <el-icon><Menu /></el-icon>
+          {{ showToc ? '隐藏目录' : '显示目录' }}
+        </el-button>
+      </div>
+
       <!-- 文章正文 -->
-      <div class="article-body">
+      <div class="article-body" :class="{ 'wide-mode': isWideMode }">
         <div class="content-wrapper">
           <!-- 调试信息 -->
           <div v-if="!article.content" class="debug-info">
@@ -99,6 +130,55 @@
           </details>
         </div>
       </div>
+
+      <!-- 悬浮式目录 -->
+      <transition name="toc-fade">
+        <div
+          v-if="showToc && tocItems.length > 0"
+          class="floating-toc"
+          :class="{
+            'toc-collapsed': tocCollapsed,
+            'toc-wide': isWideMode
+          }"
+        >
+          <!-- 目录标题栏 -->
+          <div class="toc-header" @click="tocCollapsed = !tocCollapsed">
+            <div class="toc-title">
+              <el-icon><Menu /></el-icon>
+              <span v-if="!tocCollapsed">目录</span>
+            </div>
+            <el-icon class="toc-toggle" :class="{ 'rotated': tocCollapsed }">
+              <ArrowDown />
+            </el-icon>
+          </div>
+
+          <!-- 目录内容 -->
+          <div class="toc-content" v-show="!tocCollapsed">
+            <div class="toc-progress">
+              <div class="progress-bar" :style="{ height: readingProgress + '%' }"></div>
+            </div>
+
+            <ul class="toc-list">
+              <li
+                v-for="item in tocItems"
+                :key="item.anchor"
+                :class="`toc-level-${item.level}`"
+                class="toc-item"
+              >
+                <a
+                  :href="`#${item.anchor}`"
+                  @click="scrollToHeading($event, item.anchor)"
+                  :class="{ 'active': activeHeading === item.anchor }"
+                  class="toc-link"
+                >
+                  <span class="toc-dot"></span>
+                  <span class="toc-text">{{ item.text }}</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </transition>
 
       <!-- 文章操作 -->
       <div class="article-actions">
@@ -137,10 +217,12 @@
 import ArticleDialog from '@/components/article/ArticleDialog.vue'
 import { useArticleStore } from '@/stores/article'
 import { useAuthStore } from '@/stores/auth'
-import { ArrowLeft, Edit, Loading, Share, Star, User, View } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowLeft, Edit, FullScreen, Loading, Menu, Monitor, Share, Star, User, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import 'highlight.js/styles/github.css'
 import MarkdownIt from 'markdown-it'
-import { computed, onMounted, ref } from 'vue'
+import highlightPlugin from 'markdown-it-highlightjs'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
@@ -153,12 +235,24 @@ const loading = ref(true)
 const article = ref(null)
 const showEditDialog = ref(false)
 const isLiked = ref(false)
+const isWideMode = ref(false)
+const showToc = ref(true)
+const tocItems = ref([])
+const activeHeading = ref('')
+const tocCollapsed = ref(false)
+const readingProgress = ref(0)
 
 // 创建 markdown-it 实例
 const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true
+})
+
+// 添加代码高亮插件
+md.use(highlightPlugin, {
+  auto: true,
+  code: true
 })
 
 // 计算属性
@@ -174,12 +268,66 @@ const renderedContent = computed(() => {
   try {
     const rendered = md.render(article.value.content)
     console.log('Rendered content:', rendered)
-    return rendered
+
+    // 提取目录
+    extractTocFromContent(rendered)
+
+    return addHeadingAnchors(rendered)
   } catch (error) {
     console.error('Markdown rendering error:', error)
     return '<p>内容渲染错误</p>'
   }
 })
+
+// 提取目录
+const extractTocFromContent = (htmlContent) => {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(htmlContent, 'text/html')
+  const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6')
+
+  tocItems.value = Array.from(headings).map(heading => {
+    const level = parseInt(heading.tagName.charAt(1))
+    let text = heading.textContent.trim()
+
+    // 多步骤清理数字编号
+    // 1. 移除开头的数字编号格式：1. 、2. 、1.1 、1.2.3 等
+    text = text.replace(/^\s*\d+(\.\d+)*\.?\s*/, '')
+
+    // 2. 如果还有重复，再次清理（防止嵌套编号）
+    text = text.replace(/^\s*\d+(\.\d+)*\.?\s*/, '')
+
+    // 3. 移除可能的其他编号格式
+    text = text.replace(/^[（(]\d+[)）]\s*/, '') // 移除 (1) 格式
+    text = text.replace(/^[一二三四五六七八九十]+[、.]\s*/, '') // 移除中文编号
+
+
+    const anchor = text.toLowerCase()
+      .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
+      .replace(/\s+/g, '-')
+
+    return { level, text, anchor }
+  })
+}
+
+// 为标题添加锚点
+const addHeadingAnchors = (htmlContent) => {
+  return htmlContent.replace(
+    /<h([1-6])([^>]*)>([^<]+)<\/h[1-6]>/g,
+    (match, level, attrs, text) => {
+      // 多步骤清理数字编号来生成锚点
+      let cleanText = text.trim()
+      cleanText = cleanText.replace(/^\s*\d+(\.\d+)*\.?\s*/, '')
+      cleanText = cleanText.replace(/^\s*\d+(\.\d+)*\.?\s*/, '') // 再次清理
+      cleanText = cleanText.replace(/^[（(]\d+[)）]\s*/, '')
+      cleanText = cleanText.replace(/^[一二三四五六七八九十]+[、.]\s*/, '')
+
+      const anchor = cleanText.toLowerCase()
+        .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
+        .replace(/\s+/g, '-')
+      return `<h${level}${attrs} id="${anchor}">${text}</h${level}>`
+    }
+  )
+}
 
 // 方法
 const loadArticle = async () => {
@@ -344,24 +492,155 @@ const parseTags = (tagsString) => {
   }
 }
 
+const scrollToHeading = (event, anchor) => {
+  event.preventDefault()
+  const element = document.getElementById(anchor)
+  if (element) {
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest'
+    })
+    activeHeading.value = anchor
+  }
+}
+
+// 滚动监听
+const handleScroll = () => {
+  // 计算阅读进度
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+  const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
+  readingProgress.value = Math.min((scrollTop / scrollHeight) * 100, 100)
+
+  // 更新当前活跃的标题
+  const headings = tocItems.value
+  let currentHeading = ''
+
+  for (let i = headings.length - 1; i >= 0; i--) {
+    const element = document.getElementById(headings[i].anchor)
+    if (element) {
+      const rect = element.getBoundingClientRect()
+      if (rect.top <= 100) { // 标题距离顶部100px内认为是当前标题
+        currentHeading = headings[i].anchor
+        break
+      }
+    }
+  }
+
+  if (currentHeading) {
+    activeHeading.value = currentHeading
+  }
+}
+
 // 生命周期
 onMounted(() => {
   console.log('ArticleDetail component mounted')
   console.log('Route params:', route.params)
   console.log('Route name:', route.name)
   loadArticle()
+
+  // 添加滚动监听
+  window.addEventListener('scroll', handleScroll)
+  handleScroll() // 初始化
+})
+
+onUnmounted(() => {
+  // 移除滚动监听
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
 <style scoped>
 .article-detail-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px 40px;
 }
 
 .back-section {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.back-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.back-button:hover::before {
+  left: 100%;
+}
+
+.back-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.back-button:active {
+  transform: translateY(0);
+  transition: all 0.1s ease;
+}
+
+.back-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  color: white;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.back-button:hover .back-icon {
+  transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.back-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.back-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  line-height: 1.2;
+}
+
+.back-subtext {
+  font-size: 12px;
+  color: #718096;
+  line-height: 1;
+  opacity: 0.8;
 }
 
 .loading-container,
@@ -512,10 +791,32 @@ onMounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.reading-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .article-body {
   padding: 60px 40px;
   background: white;
   position: relative;
+}
+
+.article-body.wide-mode {
+  max-width: none;
+  padding: 60px 60px;
+}
+
+.article-body.wide-mode .content-wrapper {
+  max-width: 1400px;
 }
 
 .article-body::before {
@@ -528,15 +829,238 @@ onMounted(() => {
   background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
 }
 
+/* 悬浮目录样式 */
+.floating-toc {
+  position: fixed;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 300px;
+  max-height: 70vh;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-toc.toc-collapsed {
+  width: 60px;
+  height: 60px;
+}
+
+.floating-toc.toc-wide {
+  right: 50px;
+  width: 320px;
+}
+
+.toc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 16px 16px 0 0;
+}
+
+.toc-collapsed .toc-header {
+  border-radius: 16px;
+  justify-content: center;
+}
+
+.toc-header:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+.toc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.toc-toggle {
+  transition: transform 0.3s ease;
+  opacity: 0.8;
+}
+
+.toc-toggle:hover {
+  opacity: 1;
+}
+
+.toc-toggle.rotated {
+  transform: rotate(180deg);
+}
+
+.toc-content {
+  display: flex;
+  max-height: calc(70vh - 60px);
+  overflow: hidden;
+}
+
+.toc-progress {
+  width: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 0 2px 2px 0;
+  transition: height 0.3s ease;
+}
+
+.toc-list {
+  flex: 1;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.toc-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.toc-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toc-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.toc-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.toc-item {
+  margin-bottom: 2px;
+}
+
+.toc-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #6c757d;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 13px;
+  line-height: 1.4;
+  position: relative;
+  word-break: break-word;
+}
+
+.toc-link:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.08);
+  transform: translateX(4px);
+}
+
+.toc-link.active {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.12);
+  font-weight: 600;
+  transform: translateX(4px);
+}
+
+.toc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.toc-link:hover .toc-dot,
+.toc-link.active .toc-dot {
+  opacity: 1;
+  transform: scale(1.5);
+}
+
+.toc-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 不同层级的样式 */
+.toc-level-1 .toc-link {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.toc-level-1 .toc-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.toc-level-2 .toc-link {
+  margin-left: 12px;
+  font-size: 13px;
+}
+
+.toc-level-3 .toc-link {
+  margin-left: 24px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.toc-level-4 .toc-link {
+  margin-left: 36px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.toc-level-5 .toc-link,
+.toc-level-6 .toc-link {
+  margin-left: 48px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* 动画效果 */
+.toc-fade-enter-active,
+.toc-fade-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toc-fade-enter-from,
+.toc-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-50%) translateX(100px) scale(0.8);
+}
+
 .content-wrapper {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   position: relative;
 }
 
 .markdown-content {
   line-height: 1.8;
-  font-size: 18px;
+  font-size: 15px;
   color: #2c3e50;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -654,37 +1178,118 @@ onMounted(() => {
   font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.9em;
   color: #e53e3e;
-  border: 1px solid #e2e8f0;
 }
 
 .markdown-content :deep(pre) {
-  background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-  color: #e2e8f0;
-  padding: 2em;
-  border-radius: 12px;
+  background: #f6f8fa;
+  border: none;
+  padding: 16px;
+  border-radius: 8px;
   overflow-x: auto;
-  margin: 2em 0;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  margin: 16px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   position: relative;
 }
 
-.markdown-content :deep(pre::before) {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
-  border-radius: 12px 12px 0 0;
+.markdown-content :deep(pre code) {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  display: block;
+  overflow-x: auto;
 }
 
-.markdown-content :deep(pre code) {
-  background: none;
+/* 代码高亮样式 - 与编辑器保持一致 */
+.markdown-content :deep(.hljs) {
+  display: block;
+  overflow-x: auto;
   padding: 0;
-  color: inherit;
-  font-size: 0.95em;
-  line-height: 1.6;
+  color: #24292e;
+  background: transparent;
+}
+
+.markdown-content :deep(.hljs-comment),
+.markdown-content :deep(.hljs-quote) {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.markdown-content :deep(.hljs-keyword),
+.markdown-content :deep(.hljs-selector-tag),
+.markdown-content :deep(.hljs-subst) {
+  color: #d73a49;
+  font-weight: bold;
+}
+
+.markdown-content :deep(.hljs-number),
+.markdown-content :deep(.hljs-literal),
+.markdown-content :deep(.hljs-variable),
+.markdown-content :deep(.hljs-template-variable),
+.markdown-content :deep(.hljs-tag .hljs-attr) {
+  color: #005cc5;
+}
+
+.markdown-content :deep(.hljs-string),
+.markdown-content :deep(.hljs-doctag) {
+  color: #032f62;
+}
+
+.markdown-content :deep(.hljs-title),
+.markdown-content :deep(.hljs-section),
+.markdown-content :deep(.hljs-selector-id) {
+  color: #6f42c1;
+  font-weight: bold;
+}
+
+.markdown-content :deep(.hljs-class .hljs-title) {
+  color: #6f42c1;
+}
+
+.markdown-content :deep(.hljs-tag),
+.markdown-content :deep(.hljs-name),
+.markdown-content :deep(.hljs-attribute) {
+  color: #22863a;
+  font-weight: normal;
+}
+
+.markdown-content :deep(.hljs-regexp),
+.markdown-content :deep(.hljs-link) {
+  color: #032f62;
+}
+
+.markdown-content :deep(.hljs-symbol),
+.markdown-content :deep(.hljs-bullet) {
+  color: #e36209;
+}
+
+.markdown-content :deep(.hljs-built_in),
+.markdown-content :deep(.hljs-builtin-name) {
+  color: #005cc5;
+}
+
+.markdown-content :deep(.hljs-meta) {
+  color: #6a737d;
+}
+
+.markdown-content :deep(.hljs-deletion) {
+  background: #ffeef0;
+}
+
+.markdown-content :deep(.hljs-addition) {
+  background: #f0fff4;
+}
+
+.markdown-content :deep(.hljs-emphasis) {
+  font-style: italic;
+}
+
+.markdown-content :deep(.hljs-strong) {
+  font-weight: bold;
 }
 
 .markdown-content :deep(table) {
@@ -693,14 +1298,26 @@ onMounted(() => {
   margin: 2em 0;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
 }
 
 .markdown-content :deep(th),
 .markdown-content :deep(td) {
-  border: 1px solid #e2e8f0;
+  border: none;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
   padding: 15px;
   text-align: left;
+}
+
+.markdown-content :deep(th:last-child),
+.markdown-content :deep(td:last-child) {
+  border-right: none;
+}
+
+.markdown-content :deep(tr:last-child td) {
+  border-bottom: none;
 }
 
 .markdown-content :deep(th) {
@@ -803,9 +1420,48 @@ onMounted(() => {
   word-break: break-word;
 }
 
+@media (max-width: 1200px) {
+  .article-body.wide-mode {
+    padding: 40px;
+  }
+
+  .floating-toc {
+    right: 20px;
+    width: 280px;
+  }
+
+  .floating-toc.toc-wide {
+    right: 30px;
+    width: 300px;
+  }
+}
+
 @media (max-width: 768px) {
   .article-detail-container {
     padding: 10px;
+  }
+
+  .back-section {
+    margin-bottom: 20px;
+  }
+
+  .back-button {
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+  .back-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .back-text {
+    font-size: 14px;
+  }
+
+  .back-subtext {
+    font-size: 11px;
   }
 
   .article-header {
@@ -816,8 +1472,22 @@ onMounted(() => {
     font-size: 1.8rem;
   }
 
+  .reading-controls {
+    padding: 15px 20px;
+    flex-direction: column;
+    gap: 15px;
+  }
+
   .article-body {
     padding: 20px;
+  }
+
+  .article-body.wide-mode {
+    padding: 20px;
+  }
+
+  .content-wrapper {
+    max-width: 100%;
   }
 
   .article-stats {
@@ -828,6 +1498,40 @@ onMounted(() => {
   .article-actions {
     padding: 20px;
     flex-direction: column;
+  }
+
+  /* 移动端悬浮目录优化 */
+  .floating-toc {
+    right: 10px;
+    width: 280px;
+    max-height: 60vh;
+  }
+
+  .floating-toc.toc-collapsed {
+    width: 50px;
+    height: 50px;
+  }
+
+  .floating-toc.toc-wide {
+    right: 10px;
+    width: 300px;
+  }
+
+  .toc-header {
+    padding: 12px 16px;
+  }
+
+  .toc-list {
+    padding: 15px;
+  }
+
+  .toc-link {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .toc-level-1 .toc-link {
+    font-size: 13px;
   }
 }
 </style>

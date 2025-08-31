@@ -9,6 +9,12 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@bytemd/plugin-gfm": "^1.22.0",
+    "@bytemd/plugin-highlight": "^1.22.0",
+    "@bytemd/plugin-highlight-ssr": "^1.22.0",
+    "@bytemd/plugin-math": "^1.22.0",
+    "@bytemd/plugin-mermaid": "^1.22.0",
+    "@bytemd/vue-next": "^1.22.0",
     "@element-plus/icons-vue": "^2.3.1",
     "@vueuse/core": "^10.7.0",
     "axios": "^1.6.0",
@@ -16,9 +22,12 @@
     "dayjs": "^1.11.10",
     "echarts": "^5.6.0",
     "element-plus": "^2.4.4",
+    "github-markdown-css": "^5.8.1",
     "js-yaml": "^4.1.0",
     "markdown-it": "^14.1.0",
+    "markdown-it-highlightjs": "^4.2.0",
     "pinia": "^2.1.7",
+    "prismjs": "^1.30.0",
     "vue": "^3.4.0",
     "vue-echarts": "^7.0.3",
     "vue-router": "^4.2.5"
