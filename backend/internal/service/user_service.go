@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/pkg/auth"
 	pkgdb "gin-web-framework/pkg/database"
@@ -16,11 +15,13 @@ import (
 )
 
 type UserService struct {
+	db     *gorm.DB
 	logger logger.LoggerInterface
 }
 
-func NewUserService(logger logger.LoggerInterface) *UserService {
+func NewUserService(db *gorm.DB, logger logger.LoggerInterface) *UserService {
 	return &UserService{
+		db:     db,
 		logger: logger,
 	}
 }
@@ -68,17 +69,16 @@ type PaginatedUsers struct {
 
 // Register 用户注册
 func (s *UserService) Register(req RegisterRequest) (*models.User, error) {
-	db := database.GetDB()
 
 	// 检查用户名是否已存在
 	var existingUser models.User
-	if err := db.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+	if err := s.db.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
 		s.logger.WithFields(map[string]any{"username": req.Username}).Warn("Registration failed: username already exists")
 		return nil, errors.New("username already exists")
 	}
 
 	// 检查邮箱是否已存在
-	if err := db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+	if err := s.db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		s.logger.WithFields(map[string]any{"email": req.Email}).Warn("Registration failed: email already exists")
 		return nil, errors.New("email already exists")
 	}
@@ -96,7 +96,7 @@ func (s *UserService) Register(req RegisterRequest) (*models.User, error) {
 		Password: hashedPassword,
 	}
 
-	if err := db.Create(&user).Error; err != nil {
+	if err := s.db.Create(&user).Error; err != nil {
 		s.logger.WithFields(map[string]any{"username": req.Username, "error": err}).Error("Failed to create user")
 		return nil, fmt.Errorf("failed to create user: %v", err)
 	}
@@ -107,11 +107,10 @@ func (s *UserService) Register(req RegisterRequest) (*models.User, error) {
 
 // Login 用户登录
 func (s *UserService) Login(req LoginRequest) (*LoginResponse, error) {
-	db := database.GetDB()
 
 	// 查找用户
 	var user models.User
-	if err := db.Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := s.db.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("invalid username or password")
 		}
@@ -139,10 +138,9 @@ func (s *UserService) Login(req LoginRequest) (*LoginResponse, error) {
 
 // GetUserByID 根据ID获取用户
 func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
-	db := database.GetDB()
 
 	var user models.User
-	if err := db.First(&user, userID).Error; err != nil {
+	if err := s.db.First(&user, userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("user not found")
 		}
@@ -154,10 +152,9 @@ func (s *UserService) GetUserByID(userID uint) (*models.User, error) {
 
 // GetUserByUsername 根据用户名获取用户（实现UserServiceInterface接口）
 func (s *UserService) GetUserByUsername(username string) (*models.User, error) {
-	db := database.GetDB()
 
 	var user models.User
-	if err := db.Where("username = ?", username).First(&user).Error; err != nil {
+	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("user not found")
 		}
@@ -169,10 +166,9 @@ func (s *UserService) GetUserByUsername(username string) (*models.User, error) {
 
 // UpdateProfile 更新用户资料（实现UserServiceInterface接口）
 func (s *UserService) UpdateProfile(userID uint, req UpdateProfileRequest) (*models.User, error) {
-	db := database.GetDB()
 
 	var user models.User
-	if err := db.First(&user, userID).Error; err != nil {
+	if err := s.db.First(&user, userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("user not found")
 		}
@@ -190,7 +186,7 @@ func (s *UserService) UpdateProfile(userID uint, req UpdateProfileRequest) (*mod
 		user.Nickname = req.Nickname
 	}
 
-	if err := db.Save(&user).Error; err != nil {
+	if err := s.db.Save(&user).Error; err != nil {
 		return nil, fmt.Errorf("failed to update user: %v", err)
 	}
 
@@ -199,19 +195,18 @@ func (s *UserService) UpdateProfile(userID uint, req UpdateProfileRequest) (*mod
 
 // ListUsers 获取用户列表（实现UserServiceInterface接口）
 func (s *UserService) ListUsers(page, limit int) (*PaginatedUsers, error) {
-	db := database.GetDB()
 
 	var users []*models.User
 	var total int64
 
 	// 获取总数
-	if err := db.Model(&models.User{}).Count(&total).Error; err != nil {
+	if err := s.db.Model(&models.User{}).Count(&total).Error; err != nil {
 		return nil, fmt.Errorf("failed to count users: %v", err)
 	}
 
 	// 获取分页数据
 	pagination := utils.NewPaginationInfo(page, limit, total)
-	if err := db.Offset(pagination.Offset).Limit(pagination.Limit).Find(&users).Error; err != nil {
+	if err := s.db.Offset(pagination.Offset).Limit(pagination.Limit).Find(&users).Error; err != nil {
 		return nil, pkgdb.FindRecordError("users", err)
 	}
 
@@ -226,9 +221,8 @@ func (s *UserService) ListUsers(page, limit int) (*PaginatedUsers, error) {
 
 // UpdateUserStatus 更新用户状态（实现UserServiceInterface接口）
 func (s *UserService) UpdateUserStatus(id uint, status string) error {
-	db := database.GetDB()
 
-	result := db.Model(&models.User{}).Where("id = ?", id).Update("status", status)
+	result := s.db.Model(&models.User{}).Where("id = ?", id).Update("status", status)
 	if result.Error != nil {
 		return fmt.Errorf("failed to update user status: %v", result.Error)
 	}
@@ -261,11 +255,10 @@ func (s *UserService) HashPassword(password string) (string, error) {
 
 // ChangePassword 修改密码（实现UserServiceInterface接口）
 func (s *UserService) ChangePassword(userID uint, req ChangePasswordRequest) error {
-	db := database.GetDB()
 
 	// 获取用户
 	var user models.User
-	if err := db.First(&user, userID).Error; err != nil {
+	if err := s.db.First(&user, userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
@@ -285,7 +278,7 @@ func (s *UserService) ChangePassword(userID uint, req ChangePasswordRequest) err
 
 	// 更新密码
 	user.Password = hashedPassword
-	if err := db.Save(&user).Error; err != nil {
+	if err := s.db.Save(&user).Error; err != nil {
 		return fmt.Errorf("failed to update password: %v", err)
 	}
 
@@ -299,9 +292,8 @@ func (s *UserService) CheckPassword(hashedPassword, password string) bool {
 
 // DeleteUser 删除用户（实现UserServiceInterface接口）
 func (s *UserService) DeleteUser(id uint) error {
-	db := database.GetDB()
 
-	result := db.Delete(&models.User{}, id)
+	result := s.db.Delete(&models.User{}, id)
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete user: %v", result.Error)
 	}
@@ -315,10 +307,9 @@ func (s *UserService) DeleteUser(id uint) error {
 
 // GetUserByEmail 根据邮箱获取用户（实现UserServiceInterface接口）
 func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
-	db := database.GetDB()
 
 	var user models.User
-	if err := db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("user not found")
 		}

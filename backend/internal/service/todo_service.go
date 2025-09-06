@@ -5,19 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/pkg/logger"
 
 	"gorm.io/gorm"
 )
 
-type TodoService struct{
+type TodoService struct {
+	db     *gorm.DB
 	logger logger.LoggerInterface
 }
 
-func NewTodoService(logger logger.LoggerInterface) *TodoService {
+func NewTodoService(db *gorm.DB, logger logger.LoggerInterface) *TodoService {
 	return &TodoService{
+		db:     db,
 		logger: logger,
 	}
 }
@@ -69,7 +70,6 @@ type PaginatedTodos struct {
 
 // CreateTodo 创建TODO
 func (s *TodoService) CreateTodo(req CreateTodoRequest, userID uint) (*models.Todo, error) {
-	db := database.GetDB()
 
 	todo := &models.Todo{
 		Title:          req.Title,
@@ -83,7 +83,7 @@ func (s *TodoService) CreateTodo(req CreateTodoRequest, userID uint) (*models.To
 		CreatedBy:      userID,
 	}
 
-	if err := db.Create(todo).Error; err != nil {
+	if err := s.db.Create(todo).Error; err != nil {
 		return nil, fmt.Errorf("failed to create todo: %v", err)
 	}
 
@@ -92,10 +92,9 @@ func (s *TodoService) CreateTodo(req CreateTodoRequest, userID uint) (*models.To
 
 // GetTodoList 获取TODO列表
 func (s *TodoService) GetTodoList(userID uint) ([]models.Todo, error) {
-	db := database.GetDB()
 
 	var todos []models.Todo
-	if err := db.Preload("Priority").Preload("Category").
+	if err := s.db.Preload("Priority").Preload("Category").
 		Where("created_by = ?", userID).
 		Order("created_at DESC").
 		Find(&todos).Error; err != nil {
@@ -107,7 +106,6 @@ func (s *TodoService) GetTodoList(userID uint) ([]models.Todo, error) {
 
 // GetTodoByID 根据ID获取TODO（实现TodoServiceInterface接口）
 func (s *TodoService) GetTodoByID(id uint, userID uint) (*models.Todo, error) {
-	db := database.GetDB()
 
 	var todo models.Todo
 	err := db.Where("id = ? AND created_by = ?", id, userID).
@@ -127,10 +125,9 @@ func (s *TodoService) GetTodoByID(id uint, userID uint) (*models.Todo, error) {
 
 // UpdateTodo 更新TODO
 func (s *TodoService) UpdateTodo(todoID, userID uint, req UpdateTodoRequest) (*models.Todo, error) {
-	db := database.GetDB()
 
 	var todo models.Todo
-	if err := db.Where("id = ? AND created_by = ?", todoID, userID).First(&todo).Error; err != nil {
+	if err := s.db.Where("id = ? AND created_by = ?", todoID, userID).First(&todo).Error; err != nil {
 		return nil, errors.New("todo not found")
 	}
 
@@ -173,7 +170,7 @@ func (s *TodoService) UpdateTodo(todoID, userID uint, req UpdateTodoRequest) (*m
 		todo.ActualHours = req.ActualHours
 	}
 
-	if err := db.Save(&todo).Error; err != nil {
+	if err := s.db.Save(&todo).Error; err != nil {
 		return nil, fmt.Errorf("failed to update todo: %v", err)
 	}
 
@@ -182,7 +179,6 @@ func (s *TodoService) UpdateTodo(todoID, userID uint, req UpdateTodoRequest) (*m
 
 // DeleteTodo 删除TODO
 func (s *TodoService) DeleteTodo(todoID, userID uint) error {
-	db := database.GetDB()
 
 	result := db.Where("id = ? AND created_by = ?", todoID, userID).Delete(&models.Todo{})
 	if result.RowsAffected == 0 {
@@ -194,7 +190,6 @@ func (s *TodoService) DeleteTodo(todoID, userID uint) error {
 
 // BatchDelete 批量删除TODO（实现TodoServiceInterface接口）
 func (s *TodoService) BatchDelete(ids []uint, userID uint) error {
-	db := database.GetDB()
 
 	// 批量删除指定用户的TODO
 	result := db.Where("id IN ? AND created_by = ?", ids, userID).Delete(&models.Todo{})
@@ -212,7 +207,6 @@ func (s *TodoService) BatchDelete(ids []uint, userID uint) error {
 
 // BatchUpdateStatus 批量更新TODO状态（实现TodoServiceInterface接口）
 func (s *TodoService) BatchUpdateStatus(ids []uint, userID uint, status string) error {
-	db := database.GetDB()
 
 	// 批量更新指定用户的TODO状态
 	result := db.Model(&models.Todo{}).
@@ -231,7 +225,7 @@ func (s *TodoService) BatchUpdateStatus(ids []uint, userID uint, status string) 
 	// 如果状态是completed，设置完成时间
 	if status == "completed" {
 		now := time.Now()
-		db.Model(&models.Todo{}).
+		s.db.Model(&models.Todo{}).
 			Where("id IN ? AND created_by = ?", ids, userID).
 			Update("completed_at", now)
 	}
@@ -241,7 +235,6 @@ func (s *TodoService) BatchUpdateStatus(ids []uint, userID uint, status string) 
 
 // GetOverdueTodos 获取逾期TODO（实现TodoServiceInterface接口）
 func (s *TodoService) GetOverdueTodos(userID uint) ([]*models.Todo, error) {
-	db := database.GetDB()
 
 	var todos []*models.Todo
 	now := time.Now()
@@ -261,34 +254,33 @@ func (s *TodoService) GetOverdueTodos(userID uint) ([]*models.Todo, error) {
 
 // GetTodoStats 获取TODO统计信息（实现TodoServiceInterface接口）
 func (s *TodoService) GetTodoStats(userID uint) (map[string]interface{}, error) {
-	db := database.GetDB()
 
 	stats := make(map[string]interface{})
 
 	// 统计总数
 	var total int64
-	if err := db.Model(&models.Todo{}).Where("created_by = ?", userID).Count(&total).Error; err != nil {
+	if err := s.db.Model(&models.Todo{}).Where("created_by = ?", userID).Count(&total).Error; err != nil {
 		return nil, fmt.Errorf("failed to count total todos: %v", err)
 	}
 	stats["total"] = total
 
 	// 统计已完成
 	var completed int64
-	if err := db.Model(&models.Todo{}).Where("created_by = ? AND status = ?", userID, "completed").Count(&completed).Error; err != nil {
+	if err := s.db.Model(&models.Todo{}).Where("created_by = ? AND status = ?", userID, "completed").Count(&completed).Error; err != nil {
 		return nil, fmt.Errorf("failed to count completed todos: %v", err)
 	}
 	stats["completed"] = completed
 
 	// 统计进行中
 	var inProgress int64
-	if err := db.Model(&models.Todo{}).Where("created_by = ? AND status = ?", userID, "in_progress").Count(&inProgress).Error; err != nil {
+	if err := s.db.Model(&models.Todo{}).Where("created_by = ? AND status = ?", userID, "in_progress").Count(&inProgress).Error; err != nil {
 		return nil, fmt.Errorf("failed to count in-progress todos: %v", err)
 	}
 	stats["in_progress"] = inProgress
 
 	// 统计待处理
 	var pending int64
-	if err := db.Model(&models.Todo{}).Where("created_by = ? AND status = ?", userID, "pending").Count(&pending).Error; err != nil {
+	if err := s.db.Model(&models.Todo{}).Where("created_by = ? AND status = ?", userID, "pending").Count(&pending).Error; err != nil {
 		return nil, fmt.Errorf("failed to count pending todos: %v", err)
 	}
 	stats["pending"] = pending
@@ -296,7 +288,7 @@ func (s *TodoService) GetTodoStats(userID uint) (map[string]interface{}, error) 
 	// 统计逾期
 	var overdue int64
 	now := time.Now()
-	if err := db.Model(&models.Todo{}).Where("created_by = ? AND due_date < ? AND status != ?", userID, now, "completed").Count(&overdue).Error; err != nil {
+	if err := s.db.Model(&models.Todo{}).Where("created_by = ? AND due_date < ? AND status != ?", userID, now, "completed").Count(&overdue).Error; err != nil {
 		return nil, fmt.Errorf("failed to count overdue todos: %v", err)
 	}
 	stats["overdue"] = overdue
@@ -314,9 +306,8 @@ func (s *TodoService) GetTodoStats(userID uint) (map[string]interface{}, error) 
 
 // GetTodos 获取TODO列表（实现TodoServiceInterface接口）
 func (s *TodoService) GetTodos(userID uint, filter TodoFilter) (*PaginatedTodos, error) {
-	db := database.GetDB()
 
-	query := db.Where("created_by = ?", userID)
+	query := s.db.Where("created_by = ?", userID)
 
 	// 应用过滤器
 	if filter.Status != "" {
@@ -389,7 +380,6 @@ func (s *TodoService) GetTodos(userID uint, filter TodoFilter) (*PaginatedTodos,
 
 // GetTodosByCategory 根据分类获取TODO（实现TodoServiceInterface接口）
 func (s *TodoService) GetTodosByCategory(userID uint, categoryID uint) ([]*models.Todo, error) {
-	db := database.GetDB()
 
 	var todos []*models.Todo
 	err := db.Where("created_by = ? AND category_id = ?", userID, categoryID).
@@ -407,7 +397,6 @@ func (s *TodoService) GetTodosByCategory(userID uint, categoryID uint) ([]*model
 
 // GetTodosByPriority 根据优先级获取TODO（实现TodoServiceInterface接口）
 func (s *TodoService) GetTodosByPriority(userID uint, priority string) ([]*models.Todo, error) {
-	db := database.GetDB()
 
 	var todos []*models.Todo
 	err := db.Joins("JOIN priorities ON todos.priority_id = priorities.id").
@@ -426,7 +415,6 @@ func (s *TodoService) GetTodosByPriority(userID uint, priority string) ([]*model
 
 // MarkCompleted 标记为已完成（实现TodoServiceInterface接口）
 func (s *TodoService) MarkCompleted(id uint, userID uint) error {
-	db := database.GetDB()
 
 	now := time.Now()
 	result := db.Model(&models.Todo{}).
@@ -449,7 +437,6 @@ func (s *TodoService) MarkCompleted(id uint, userID uint) error {
 
 // MarkInProgress 标记为进行中（实现TodoServiceInterface接口）
 func (s *TodoService) MarkInProgress(id uint, userID uint) error {
-	db := database.GetDB()
 
 	result := db.Model(&models.Todo{}).
 		Where("id = ? AND created_by = ?", id, userID).
@@ -468,7 +455,6 @@ func (s *TodoService) MarkInProgress(id uint, userID uint) error {
 
 // MarkCancelled 标记为已取消（实现TodoServiceInterface接口）
 func (s *TodoService) MarkCancelled(id uint, userID uint) error {
-	db := database.GetDB()
 
 	result := db.Model(&models.Todo{}).
 		Where("id = ? AND created_by = ?", id, userID).

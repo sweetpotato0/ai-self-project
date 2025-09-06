@@ -95,8 +95,8 @@ func (c *Container) initializeAllServices() {
 	globalLogger := logger.GetLogger()
 
 	// 创建所有服务实例 - 逐步添加logger
-	userService := service.NewUserService(globalLogger)
-	todoService := service.NewTodoService(globalLogger)
+	userService := service.NewUserService(c.db, globalLogger)
+	todoService := service.NewTodoService(c.db, globalLogger)
 	articleService := service.NewArticleService(c.db, globalLogger)
 	notificationService := service.NewNotificationService(globalLogger)
 	statisticsService := service.NewStatisticsService(globalLogger)
