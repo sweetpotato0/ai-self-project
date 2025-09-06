@@ -68,6 +68,24 @@
             </el-menu-item>
           </el-tooltip>
 
+          <el-dropdown trigger="hover" placement="right-start">
+            <el-menu-item index="english-learning">
+              <el-icon><VideoPlay /></el-icon>
+            </el-menu-item>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="navigateTo('english-learning')">
+                  <el-icon><Microphone /></el-icon>
+                  英语歌曲
+                </el-dropdown-item>
+                <el-dropdown-item @click="navigateTo('EnglishVideos')">
+                  <el-icon><VideoCamera /></el-icon>
+                  英语视频
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+
           <el-tooltip content="审计日志" placement="right">
             <el-menu-item index="audit-logs" @click="navigateTo('audit-logs')">
               <el-icon><Monitor /></el-icon>
@@ -112,10 +130,36 @@
             <span>工具箱</span>
           </el-menu-item>
 
+          <el-sub-menu index="english-learning">
+            <template #title>
+              <el-icon><VideoPlay /></el-icon>
+              <span>英语学习</span>
+            </template>
+            <el-menu-item index="english-songs" @click="navigateTo('english-learning')">
+              <el-icon><Microphone /></el-icon>
+              <span>英语歌曲</span>
+            </el-menu-item>
+            <el-menu-item index="english-videos" @click="navigateTo('EnglishVideos')">
+              <el-icon><VideoCamera /></el-icon>
+              <span>英语视频</span>
+            </el-menu-item>
+          </el-sub-menu>
+
           <el-menu-item index="audit-logs" @click="navigateTo('audit-logs')">
             <el-icon><Monitor /></el-icon>
             <span>审计日志</span>
           </el-menu-item>
+
+          <el-sub-menu index="admin" v-if="isAdmin">
+            <template #title>
+              <el-icon><Tools /></el-icon>
+              <span>管理功能</span>
+            </template>
+            <el-menu-item index="admin-english-videos" @click="navigateTo('admin-english-videos')">
+              <el-icon><VideoPlay /></el-icon>
+              <span>视频管理</span>
+            </el-menu-item>
+          </el-sub-menu>
 
           <el-menu-item index="settings" @click="navigateTo('settings')">
             <el-icon><Setting /></el-icon>
@@ -213,7 +257,7 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import {
   Grid, Fold, Expand, DataBoard, List, Calendar,
-  TrendCharts, Setting, User, SwitchButton, Document, Tools, Monitor
+  TrendCharts, Setting, User, SwitchButton, Document, Tools, Monitor, VideoPlay, Microphone, VideoCamera
 } from '@element-plus/icons-vue'
 import NotificationPanel from '@/components/notification/NotificationPanel.vue'
 import WebSocketNotification from '@/components/notification/WebSocketNotification.vue'
@@ -259,10 +303,22 @@ const pageTitle = computed(() => {
     'tools-ip-lookup': 'IP地址查询',
     'tools-whois-lookup': 'Whois查询',
     'tools-domain-info': '域名信息查询',
+    'english-learning': '英语学习',
+    'EnglishVideos': '英语视频',
+    'VideoPlayer': '视频播放器',
+    'audit-logs': '审计日志',
+    'admin-english-videos': '视频管理后台',
+    'admin-video-series': '视频系列管理',
+    'admin-video-episodes': '剧集管理',
     settings: '系统设置',
     profile: '个人资料'
   }
   return titleMap[route.name] || '仪表盘'
+})
+
+// 判断是否为管理员
+const isAdmin = computed(() => {
+  return authStore.user?.role === 'admin'
 })
 
 // 方法

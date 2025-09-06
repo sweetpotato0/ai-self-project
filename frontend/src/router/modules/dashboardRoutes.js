@@ -49,5 +49,48 @@ export const dashboardRoutes = [
     path: 'audit-logs',
     name: 'audit-logs',
     component: () => import('@/features/audit/views/AuditLogs.vue')
+  },
+  {
+    path: 'english-learning',
+    name: 'english-learning',
+    component: () => import('@/features/english-learning/views/EnglishLearning.vue')
+  },
+  {
+    path: 'english-learning/play/:id',
+    name: 'song-player',
+    component: () => import('@/features/english-learning/views/SongPlayer.vue')
+  },
+  {
+    path: 'english-videos',
+    name: 'EnglishVideos',
+    component: () => import('@/features/english-videos/views/EnglishVideos.vue')
+  },
+  {
+    path: 'english-videos/series/:seriesId',
+    name: 'VideoSeries',
+    component: () => import('@/features/english-videos/views/VideoPlayer.vue')
+  },
+  {
+    path: 'english-videos/play/:seriesId/:episodeId',
+    name: 'VideoPlayer',
+    component: () => import('@/features/english-videos/views/VideoPlayer.vue')
+  },
+  {
+    path: 'admin/english-videos',
+    name: 'admin-english-videos',
+    component: () => import('@/features/english-videos/views/admin/AdminDashboard.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: 'admin/english-videos/series',
+    name: 'admin-video-series',
+    component: () => import('@/features/english-videos/views/admin/VideoSeriesAdmin.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: 'admin/english-videos/episodes',
+    name: 'admin-video-episodes',
+    component: () => import('@/features/english-videos/views/admin/EpisodeAdmin.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]

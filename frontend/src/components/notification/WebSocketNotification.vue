@@ -66,13 +66,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
-import { ElMessage } from 'element-plus'
-import { Bell, Clock, CircleCheck, CircleClose, Loading } from '@element-plus/icons-vue'
 import { formatDateTime } from '@/utils/dateTime'
+import { Bell, CircleCheck, CircleClose, Clock, Loading } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -118,7 +118,7 @@ const connectWebSocket = () => {
     ws.value = new WebSocket(wsUrl)
 
     ws.value.onopen = () => {
-      console.log('WebSocket connected')
+      // console.log('WebSocket connected')
       connectionStatus.value = 'connected'
       reconnectAttempts.value = 0
 
@@ -138,7 +138,7 @@ const connectWebSocket = () => {
     }
 
     ws.value.onclose = () => {
-      console.log('WebSocket disconnected')
+      // console.log('WebSocket disconnected')
       connectionStatus.value = 'disconnected'
 
       // 自动重连
@@ -146,7 +146,7 @@ const connectWebSocket = () => {
         reconnectAttempts.value++
         const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.value), 30000)
 
-        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.value}/${maxReconnectAttempts})`)
+        // console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts.value}/${maxReconnectAttempts})`)
 
         reconnectInterval.value = setTimeout(() => {
           connectWebSocket()
@@ -172,7 +172,7 @@ const connectWebSocket = () => {
 const handleWebSocketMessage = (data) => {
   switch (data.type) {
     case 'connection':
-      console.log('WebSocket connection established:', data.data)
+      // console.log('WebSocket connection established:', data.data)
       break
 
     case 'notification':
