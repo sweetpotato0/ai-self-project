@@ -88,6 +88,12 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 			users.PUT("/profile", middleware.AuthMiddleware(), userHandler.UpdateProfile)
 		}
 
+		// 认证相关路由
+		auth := apiGroup.Group("/auth")
+		{
+			auth.POST("/refresh", userHandler.RefreshToken)
+		}
+
 		// TODO相关路由
 		todos := apiGroup.Group("/todos")
 		{
@@ -177,6 +183,93 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 			auditLogs.GET("/:id", middleware.AuthMiddleware(), auditHandler.GetAuditLogByID)
 			auditLogs.GET("/stats", middleware.AuthMiddleware(), auditHandler.GetAuditLogStats)
 			auditLogs.DELETE("", middleware.AuthMiddleware(), auditHandler.DeleteAuditLogs)
+		}
+
+		// 英文学习相关路由
+		englishLearningHandler := container.GetEnglishLearningHandler()
+		englishVideoHandler := container.GetEnglishVideoHandler()
+		learning := apiGroup.Group("/learning")
+		{
+			// 学习分类管理
+			categories := learning.Group("/categories")
+			{
+				categories.GET("", englishLearningHandler.GetCategories)
+				categories.POST("", middleware.AuthMiddleware(), englishLearningHandler.CreateCategory)
+				categories.PUT("/:id", middleware.AuthMiddleware(), englishLearningHandler.UpdateCategory)
+				categories.DELETE("/:id", middleware.AuthMiddleware(), englishLearningHandler.DeleteCategory)
+			}
+
+			// 歌曲/学习材料管理
+			songs := learning.Group("/songs")
+			{
+				songs.GET("", englishLearningHandler.GetSongs)
+				songs.GET("/:id", englishLearningHandler.GetSongByID)
+				songs.POST("", middleware.AuthMiddleware(), englishLearningHandler.CreateSong)
+				songs.PUT("/:id", middleware.AuthMiddleware(), englishLearningHandler.UpdateSong)
+				songs.DELETE("/:id", middleware.AuthMiddleware(), englishLearningHandler.DeleteSong)
+				songs.POST("/:id/like", middleware.AuthMiddleware(), englishLearningHandler.LikeSong)
+				songs.DELETE("/:id/like", middleware.AuthMiddleware(), englishLearningHandler.UnlikeSong)
+				songs.PUT("/:id/progress", middleware.AuthMiddleware(), englishLearningHandler.UpdateProgress)
+			}
+
+			// 用户学习相关
+			user := learning.Group("/user")
+			{
+				user.GET("/progress", middleware.AuthMiddleware(), englishLearningHandler.GetProgress)
+				user.GET("/recommendations", middleware.AuthMiddleware(), englishLearningHandler.GetRecommendations)
+				user.GET("/stats", middleware.AuthMiddleware(), englishLearningHandler.GetStats)
+			}
+		}
+
+		// 英文视频相关路由
+		englishVideos := apiGroup.Group("/english-videos")
+		{
+			// 根级别的统计和进度路由
+			englishVideos.GET("/stats", englishVideoHandler.GetVideoStats)
+			englishVideos.GET("/progress", middleware.AuthMiddleware(), englishVideoHandler.GetUserProgress)
+
+			// 视频系列
+			series := englishVideos.Group("/series")
+			{
+				series.GET("", englishVideoHandler.GetVideoSeries)
+				series.GET("/search", englishVideoHandler.SearchVideoSeries)
+				series.GET("/recommended", englishVideoHandler.GetRecommendedSeries)
+				series.GET("/:seriesId", englishVideoHandler.GetVideoSeriesDetail)
+				series.POST("/:seriesId/toggle-like", middleware.AuthMiddleware(), englishVideoHandler.ToggleSeriesLike)
+				series.GET("/:seriesId/episodes", englishVideoHandler.GetEpisodes)
+				
+				// 管理员功能
+				admin := series.Group("/admin")
+				{
+					admin.POST("", middleware.AuthMiddleware(), englishVideoHandler.CreateVideoSeries)
+					admin.PUT("/:seriesId", middleware.AuthMiddleware(), englishVideoHandler.UpdateVideoSeries)
+					admin.DELETE("/:seriesId", middleware.AuthMiddleware(), englishVideoHandler.DeleteVideoSeries)
+					admin.POST("/:seriesId/episodes", middleware.AuthMiddleware(), englishVideoHandler.CreateEpisode)
+					admin.POST("/:seriesId/episodes/batch", middleware.AuthMiddleware(), englishVideoHandler.BatchImportEpisodes)
+				}
+			}
+
+			// 剧集
+			episodes := englishVideos.Group("/episodes")
+			{
+				episodes.GET("/:episodeId", englishVideoHandler.GetEpisodeDetail)
+				episodes.GET("/:episodeId/progress", middleware.AuthMiddleware(), englishVideoHandler.GetEpisodeProgress)
+				episodes.POST("/:episodeId/progress", middleware.AuthMiddleware(), englishVideoHandler.UpdateEpisodeProgress)
+				
+				// 管理员功能
+				admin := episodes.Group("/admin")
+				{
+					admin.PUT("/:episodeId", middleware.AuthMiddleware(), englishVideoHandler.UpdateEpisode)
+					admin.DELETE("/:episodeId", middleware.AuthMiddleware(), englishVideoHandler.DeleteEpisode)
+					admin.POST("/uncategorized", middleware.AuthMiddleware(), englishVideoHandler.CreateUncategorizedEpisode)
+				}
+			}
+
+			// 用户统计
+			user := englishVideos.Group("/user")
+			{
+				user.GET("/stats", middleware.AuthMiddleware(), englishVideoHandler.GetUserVideoStats)
+			}
 		}
 	}
 

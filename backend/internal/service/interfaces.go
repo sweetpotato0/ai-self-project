@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"gin-web-framework/internal/api"
 	"gin-web-framework/internal/models"
 )
 
@@ -10,6 +11,7 @@ type UserServiceInterface interface {
 	// 用户认证
 	Register(req RegisterRequest) (*models.User, error)
 	Login(req LoginRequest) (*LoginResponse, error)
+	RefreshToken(token string) (*LoginResponse, error)
 	GetUserByID(id uint) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
 	GetUserByUsername(username string) (*models.User, error)
@@ -271,4 +273,67 @@ type WebSocketServiceInterface interface {
 	PushNotification(userID uint, notification *models.Notification) error
 	PushTaskReminder(userID uint, todo *models.Todo) error
 	PushSystemMessage(message string) error
+}
+
+// EnglishLearningServiceInterface 英语学习服务接口
+type EnglishLearningServiceInterface interface {
+	// 分类管理
+	GetCategories(filter *CategoryFilter) (*PaginatedCategories, error)
+	CreateCategory(category *models.LearningCategory) error
+	UpdateCategory(id uint, updates map[string]interface{}) error
+	DeleteCategory(id uint) error
+
+	// 歌曲管理
+	GetSongs(filter *SongFilter) (*PaginatedSongs, error)
+	GetSongByID(id uint) (*models.Song, error)
+	CreateSong(song *models.Song) error
+	UpdateSong(id uint, updates map[string]interface{}) error
+	DeleteSong(id uint) error
+
+	// 用户互动
+	LikeSong(songID, userID uint) error
+	UnlikeSong(songID, userID uint) error
+
+	// 进度管理
+	UpdateUserProgress(userID, songID uint, updates map[string]interface{}) error
+	GetUserProgress(userID uint, songID *uint) ([]models.UserProgress, error)
+
+	// 推荐和统计
+	GetRecommendedSongs(userID uint, limit int) ([]*models.Song, error)
+	GetUserStats(userID uint) (*LearningStats, error)
+}
+
+// EnglishVideoServiceInterface 英语视频服务接口
+type EnglishVideoServiceInterface interface {
+	// 视频系列管理
+	GetVideoSeries(req *api.VideoSeriesListRequest) (*api.VideoSeriesListResponse, error)
+	GetVideoSeriesDetail(seriesID, userID uint) (*models.VideoSeries, error)
+	CreateVideoSeries(req *api.CreateVideoSeriesRequest, userID uint) (*models.VideoSeries, error)
+	UpdateVideoSeries(seriesID uint, req *api.UpdateVideoSeriesRequest) error
+	DeleteVideoSeries(seriesID uint) error
+
+	// 剧集管理
+	GetEpisodes(seriesID uint, req *api.EpisodeListRequest) (*api.EpisodeListResponse, error)
+	GetEpisodeDetail(episodeID uint) (*models.VideoEpisode, error)
+	CreateEpisode(seriesID uint, req *api.CreateEpisodeRequest, userID uint) (*models.VideoEpisode, error)
+	UpdateEpisode(episodeID uint, req *api.UpdateEpisodeRequest) error
+	DeleteEpisode(episodeID uint) error
+	BatchImportEpisodes(seriesID uint, req *api.BatchImportEpisodesRequest, userID uint) (*api.BatchImportResult, error)
+	CreateUncategorizedEpisode(req *api.CreateEpisodeRequest, userID uint) (*models.VideoEpisode, error)
+
+	// 用户进度管理
+	GetEpisodeProgress(userID, episodeID uint) (*models.VideoUserProgress, error)
+	UpdateEpisodeProgress(userID, episodeID uint, req *api.UpdateProgressRequest) error
+	GetUserProgress(userID uint) ([]models.VideoUserProgress, error)
+
+	// 用户互动
+	ToggleSeriesLike(userID, seriesID uint) (*api.ToggleLikeResponse, error)
+
+	// 搜索和推荐
+	SearchVideoSeries(req *api.SearchVideoSeriesRequest, userID uint) ([]models.VideoSeries, error)
+	GetRecommendedSeries(userID uint, limit int) ([]models.VideoSeries, error)
+
+	// 统计
+	GetVideoStats() (*api.VideoStatsResponse, error)
+	GetUserVideoStats(userID uint) (*api.UserVideoStatsResponse, error)
 }

@@ -48,6 +48,10 @@ type ContainerInterface interface {
 	// 审计服务
 	GetAuditService() *service.AuditService
 
+	// 英文学习服务
+	GetEnglishLearningService() service.EnglishLearningServiceInterface
+	GetEnglishVideoService() service.EnglishVideoServiceInterface
+
 	// 处理器层
 	GetUserHandler() *handler.UserHandler
 	GetTodoHandler() *handler.TodoHandler
@@ -60,6 +64,8 @@ type ContainerInterface interface {
 	GetAuditHandler() *handler.AuditHandler
 	GetUploadHandler() *handler.UploadHandler
 	GetWebSocketHandler() *handler.WebSocketHandler
+	GetEnglishLearningHandler() *handler.EnglishLearningHandler
+	GetEnglishVideoHandler() *handler.EnglishVideoHandler
 
 	// 容器管理
 	Register(name string, service interface{})
@@ -99,6 +105,8 @@ func (c *Container) initializeAllServices() {
 	settingsService := service.NewSettingsService(c.db, globalLogger)
 	toolsService := service.NewToolsService(globalLogger)
 	auditService := service.NewAuditService(c.db, globalLogger.(*logger.Logger))
+	englishLearningService := service.NewEnglishLearningService(c.db, globalLogger)
+	englishVideoService := service.NewEnglishVideoService(c.db)
 
 	// 创建依赖缓存服务的组件
 	queryOptimizer := service.NewQueryOptimizer(c.db, cacheService)
@@ -116,6 +124,8 @@ func (c *Container) initializeAllServices() {
 	auditHandler := handler.NewAuditHandler(auditService, globalLogger.(*logger.Logger))
 	uploadHandler := handler.NewUploadHandler()
 	websocketHandler := handler.NewWebSocketHandler(globalLogger)
+	englishLearningHandler := handler.NewEnglishLearningHandler(englishLearningService, globalLogger)
+	englishVideoHandler := handler.NewEnglishVideoHandler(englishVideoService)
 
 	// 注册所有服务
 	c.services["user_service"] = userService
@@ -128,6 +138,8 @@ func (c *Container) initializeAllServices() {
 	c.services["settings_service"] = settingsService
 	c.services["tools_service"] = toolsService
 	c.services["audit_service"] = auditService
+	c.services["english_learning_service"] = englishLearningService
+	c.services["english_video_service"] = englishVideoService
 	c.services["query_optimizer"] = queryOptimizer
 	c.services["statistics_cache"] = statisticsCache
 
@@ -143,6 +155,8 @@ func (c *Container) initializeAllServices() {
 	c.services["audit_handler"] = auditHandler
 	c.services["upload_handler"] = uploadHandler
 	c.services["websocket_handler"] = websocketHandler
+	c.services["english_learning_handler"] = englishLearningHandler
+	c.services["english_video_handler"] = englishVideoHandler
 
 	logger.Info("All services initialized successfully")
 }
@@ -197,6 +211,14 @@ func (c *Container) GetQueryOptimizer() *service.QueryOptimizer {
 
 func (c *Container) GetStatisticsCache() *service.StatisticsCache {
 	return c.services["statistics_cache"].(*service.StatisticsCache)
+}
+
+func (c *Container) GetEnglishLearningService() service.EnglishLearningServiceInterface {
+	return c.services["english_learning_service"].(service.EnglishLearningServiceInterface)
+}
+
+func (c *Container) GetEnglishVideoService() service.EnglishVideoServiceInterface {
+	return c.services["english_video_service"].(service.EnglishVideoServiceInterface)
 }
 
 // 处理器层实现 - 直接从已初始化的处理器中获取
@@ -347,4 +369,12 @@ func (c *Container) GetUploadHandler() *handler.UploadHandler {
 // GetWebSocketHandler 获取WebSocket处理器
 func (c *Container) GetWebSocketHandler() *handler.WebSocketHandler {
 	return c.services["websocket_handler"].(*handler.WebSocketHandler)
+}
+
+func (c *Container) GetEnglishLearningHandler() *handler.EnglishLearningHandler {
+	return c.services["english_learning_handler"].(*handler.EnglishLearningHandler)
+}
+
+func (c *Container) GetEnglishVideoHandler() *handler.EnglishVideoHandler {
+	return c.services["english_video_handler"].(*handler.EnglishVideoHandler)
 }
