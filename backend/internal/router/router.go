@@ -53,7 +53,7 @@ func Setup(container container.ContainerInterface) *gin.Engine {
 	r.Use(middleware.OptionalAuthMiddleware())
 	
 	// 审计日志中间件
-	auditMiddleware := middleware.NewAuditMiddleware(container.GetDB(), logger.GetLogger().(*logger.Logger))
+	auditMiddleware := middleware.NewOptimizedAuditMiddleware(container.GetDB(), logger.GetLogger().(*logger.Logger))
 	r.Use(auditMiddleware.AuditLog())
 
 	// 获取handler实例

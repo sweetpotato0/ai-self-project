@@ -6,9 +6,10 @@ import (
 
 	"gin-web-framework/internal/models"
 	"gin-web-framework/pkg/auth"
-	pkgdb "gin-web-framework/pkg/database"
+	pkgerrors "gin-web-framework/pkg/errors"
 	"gin-web-framework/pkg/jwt"
 	"gin-web-framework/pkg/logger"
+	pkgdb "gin-web-framework/pkg/database"
 	"gin-web-framework/pkg/utils"
 
 	"gorm.io/gorm"
@@ -74,19 +75,19 @@ func (s *UserService) Register(req RegisterRequest) (*models.User, error) {
 	var existingUser models.User
 	if err := s.db.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
 		s.logger.WithFields(map[string]any{"username": req.Username}).Warn("Registration failed: username already exists")
-		return nil, errors.New("username already exists")
+		return nil, pkgerrors.NewConflictError("用户名已存在")
 	}
 
 	// 检查邮箱是否已存在
 	if err := s.db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		s.logger.WithFields(map[string]any{"email": req.Email}).Warn("Registration failed: email already exists")
-		return nil, errors.New("email already exists")
+		return nil, pkgerrors.NewConflictError("邮箱已存在")
 	}
 
 	// 加密密码
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hash password: %v", err)
+		return nil, pkgerrors.NewInternalError("密码加密失败", err)
 	}
 
 	// 创建用户
@@ -98,7 +99,7 @@ func (s *UserService) Register(req RegisterRequest) (*models.User, error) {
 
 	if err := s.db.Create(&user).Error; err != nil {
 		s.logger.WithFields(map[string]any{"username": req.Username, "error": err}).Error("Failed to create user")
-		return nil, fmt.Errorf("failed to create user: %v", err)
+		return nil, pkgerrors.NewDatabaseError("用户创建失败", err)
 	}
 
 	s.logger.WithFields(map[string]any{"user_id": user.ID, "username": user.Username}).Info("User registered successfully")
@@ -112,7 +113,7 @@ func (s *UserService) Login(req LoginRequest) (*LoginResponse, error) {
 	var user models.User
 	if err := s.db.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("invalid username or password")
+			return nil, pkgerrors.NewUnauthorizedError("用户名或密码错误")
 		}
 		return nil, fmt.Errorf("database error: %v", err)
 	}
@@ -120,7 +121,7 @@ func (s *UserService) Login(req LoginRequest) (*LoginResponse, error) {
 	// 验证密码
 	if !auth.CheckPassword(req.Password, user.Password) {
 		s.logger.WithFields(map[string]any{"username": req.Username}).Warn("Login failed: invalid password")
-		return nil, errors.New("invalid username or password")
+		return nil, pkgerrors.NewUnauthorizedError("用户名或密码错误")
 	}
 
 	// 生成JWT token

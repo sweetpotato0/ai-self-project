@@ -2,33 +2,35 @@ package service
 
 import (
 	"fmt"
-	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/pkg/logger"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // NotificationManager 通知管理器
 type NotificationManager struct {
 	notificationService *NotificationService
+	db                  *gorm.DB
 }
 
-func NewNotificationManager(logger logger.LoggerInterface) *NotificationManager {
+func NewNotificationManager(db *gorm.DB, logger logger.LoggerInterface) *NotificationManager {
 	return &NotificationManager{
-		notificationService: NewNotificationService(logger),
+		notificationService: NewNotificationService(db, logger),
+		db:                  db,
 	}
 }
 
 // CheckTaskDueNotifications 检查任务到期通知
 func (nm *NotificationManager) CheckTaskDueNotifications() error {
-	db := database.GetDB()
 	now := time.Now()
 
 	// 查找即将到期的任务（24小时内）
 	dueSoon := now.Add(24 * time.Hour)
 	var dueSoonTasks []models.Todo
 
-	if err := db.Where("due_date <= ? AND due_date > ? AND status != ?",
+	if err := nm.db.Where("due_date <= ? AND due_date > ? AND status != ?",
 		dueSoon, now, "completed").Find(&dueSoonTasks).Error; err != nil {
 		return fmt.Errorf("failed to query due soon tasks: %v", err)
 	}
@@ -36,7 +38,7 @@ func (nm *NotificationManager) CheckTaskDueNotifications() error {
 	for _, task := range dueSoonTasks {
 		// 检查是否已经发送过通知
 		var existingNotification models.Notification
-		if err := db.Where("user_id = ? AND type = ? AND data LIKE ?",
+		if err := nm.db.Where("user_id = ? AND type = ? AND data LIKE ?",
 			task.CreatedBy, "due_soon", "%"+task.Title+"%").First(&existingNotification).Error; err == nil {
 			// 已经发送过通知，跳过
 			continue
@@ -64,14 +66,14 @@ func (nm *NotificationManager) CheckTaskDueNotifications() error {
 
 	// 查找已逾期的任务
 	var overdueTasks []models.Todo
-	if err := db.Where("due_date < ? AND status != ?", now, "completed").Find(&overdueTasks).Error; err != nil {
+	if err := nm.db.Where("due_date < ? AND status != ?", now, "completed").Find(&overdueTasks).Error; err != nil {
 		return fmt.Errorf("failed to query overdue tasks: %v", err)
 	}
 
 	for _, task := range overdueTasks {
 		// 检查是否已经发送过逾期通知
 		var existingNotification models.Notification
-		if err := db.Where("user_id = ? AND type = ? AND data LIKE ?",
+		if err := nm.db.Where("user_id = ? AND type = ? AND data LIKE ?",
 			task.CreatedBy, "overdue", "%"+task.Title+"%").First(&existingNotification).Error; err == nil {
 			// 已经发送过通知，跳过
 			continue
@@ -185,12 +187,11 @@ func (nm *NotificationManager) RunNotificationChecks() {
 
 // CreateDailySummaryNotification 创建每日总结通知
 func (nm *NotificationManager) CreateDailySummaryNotification(userID uint) error {
-	db := database.GetDB()
 
 	// 获取今日完成的任务数
 	var completedToday int64
 	today := time.Now().Truncate(24 * time.Hour)
-	if err := db.Model(&models.Todo{}).
+	if err := nm.db.Model(&models.Todo{}).
 		Where("created_by = ? AND status = ? AND DATE(completed_at) = DATE(?)",
 			userID, "completed", today).Count(&completedToday).Error; err != nil {
 		return fmt.Errorf("failed to count completed tasks: %v", err)
@@ -198,7 +199,7 @@ func (nm *NotificationManager) CreateDailySummaryNotification(userID uint) error
 
 	// 获取待处理的任务数
 	var pendingTasks int64
-	if err := db.Model(&models.Todo{}).
+	if err := nm.db.Model(&models.Todo{}).
 		Where("created_by = ? AND status = ?", userID, "pending").Count(&pendingTasks).Error; err != nil {
 		return fmt.Errorf("failed to count pending tasks: %v", err)
 	}
@@ -206,7 +207,7 @@ func (nm *NotificationManager) CreateDailySummaryNotification(userID uint) error
 	// 获取即将到期的任务数
 	dueSoon := time.Now().Add(24 * time.Hour)
 	var dueSoonTasks int64
-	if err := db.Model(&models.Todo{}).
+	if err := nm.db.Model(&models.Todo{}).
 		Where("created_by = ? AND due_date <= ? AND status != ?",
 			userID, dueSoon, "completed").Count(&dueSoonTasks).Error; err != nil {
 		return fmt.Errorf("failed to count due soon tasks: %v", err)
@@ -236,7 +237,6 @@ func (nm *NotificationManager) CreateDailySummaryNotification(userID uint) error
 
 // CreateWeeklyReportNotification 创建周报通知
 func (nm *NotificationManager) CreateWeeklyReportNotification(userID uint) error {
-	db := database.GetDB()
 
 	// 获取本周完成的任务数
 	var completedThisWeek int64
@@ -245,7 +245,7 @@ func (nm *NotificationManager) CreateWeeklyReportNotification(userID uint) error
 		weekStart = weekStart.Add(-24 * time.Hour)
 	}
 
-	if err := db.Model(&models.Todo{}).
+	if err := nm.db.Model(&models.Todo{}).
 		Where("created_by = ? AND status = ? AND completed_at >= ?",
 			userID, "completed", weekStart).Count(&completedThisWeek).Error; err != nil {
 		return fmt.Errorf("failed to count weekly completed tasks: %v", err)
@@ -253,7 +253,7 @@ func (nm *NotificationManager) CreateWeeklyReportNotification(userID uint) error
 
 	// 获取本周创建的任务数
 	var createdThisWeek int64
-	if err := db.Model(&models.Todo{}).
+	if err := nm.db.Model(&models.Todo{}).
 		Where("created_by = ? AND created_at >= ?", userID, weekStart).Count(&createdThisWeek).Error; err != nil {
 		return fmt.Errorf("failed to count weekly created tasks: %v", err)
 	}

@@ -89,7 +89,7 @@ func (s *AuditService) GetAuditLogs(query *model.AuditLogQuery) ([]*model.AuditL
 
 	// 应用分页
 	offset := (query.Page - 1) * query.Limit
-	if err := db.Order(orderBy+" "+order).
+	if err := db.Order(orderBy + " " + order).
 		Offset(offset).
 		Limit(query.Limit).
 		Find(&logs).Error; err != nil {

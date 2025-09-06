@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"gorm.io/gorm"
 )
 
 var upgrader = websocket.Upgrader{
@@ -23,13 +24,15 @@ var upgrader = websocket.Upgrader{
 type WebSocketHandler struct {
 	realtimeService *service.RealtimeNotificationService
 	logger          logger.LoggerInterface
+	db              *gorm.DB
 }
 
 // NewWebSocketHandler 创建WebSocket处理器
-func NewWebSocketHandler(logger logger.LoggerInterface) *WebSocketHandler {
+func NewWebSocketHandler(logger logger.LoggerInterface, db *gorm.DB) *WebSocketHandler {
 	return &WebSocketHandler{
-		realtimeService: service.NewRealtimeNotificationService(logger),
+		realtimeService: service.NewRealtimeNotificationService(logger, db),
 		logger:          logger,
+		db:              db,
 	}
 }
 
@@ -112,7 +115,7 @@ func (h *WebSocketHandler) WebSocket(c *gin.Context) {
 			}
 		case "get_notifications":
 			// 获取最新通知
-			notificationService := service.NewNotificationService(h.logger)
+			notificationService := service.NewNotificationService(h.db, h.logger)
 			notifications, err := notificationService.GetUserNotifications(userID, 10)
 			if err != nil {
 				fmt.Printf("Failed to get notifications: %v\n", err)
@@ -139,8 +142,8 @@ func (h *WebSocketHandler) WebSocket(c *gin.Context) {
 var websocketHandler *WebSocketHandler
 
 // InitWebSocketHandler 初始化WebSocket处理器
-func InitWebSocketHandler(logger logger.LoggerInterface) {
-	websocketHandler = NewWebSocketHandler(logger)
+func InitWebSocketHandler(logger logger.LoggerInterface, db *gorm.DB) {
+	websocketHandler = NewWebSocketHandler(logger, db)
 }
 
 // WebSocketHandlerFunc 返回WebSocket处理函数

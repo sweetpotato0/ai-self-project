@@ -145,7 +145,7 @@ func (s *TodoService) UpdateTodo(todoID, userID uint, req UpdateTodoRequest) (*m
 			todo.CompletedAt = &now
 
 			// 创建任务完成通知
-			notificationManager := NewNotificationManager(s.logger)
+			notificationManager := NewNotificationManager(s.db, s.logger)
 			if err := notificationManager.CreateTaskCompletedNotification(&todo); err != nil {
 				fmt.Printf("Failed to create completion notification: %v\n", err)
 			}

@@ -3,6 +3,8 @@ package service
 import (
 	"gin-web-framework/pkg/logger"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Scheduler 定时任务调度器
@@ -10,13 +12,15 @@ type Scheduler struct {
 	notificationManager *NotificationManager
 	stopChan            chan bool
 	logger              logger.LoggerInterface
+	db                  *gorm.DB
 }
 
-func NewScheduler(logger logger.LoggerInterface) *Scheduler {
+func NewScheduler(db *gorm.DB, logger logger.LoggerInterface) *Scheduler {
 	return &Scheduler{
-		notificationManager: NewNotificationManager(logger),
+		notificationManager: NewNotificationManager(db, logger),
 		stopChan:            make(chan bool),
 		logger:              logger,
+		db:                  db,
 	}
 }
 

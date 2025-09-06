@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"gorm.io/gorm"
 )
 
 // RealtimeNotificationService 实时通知服务
@@ -19,14 +20,16 @@ type RealtimeNotificationService struct {
 	clientsMux sync.RWMutex
 	stopChan   chan bool
 	logger     logger.LoggerInterface
+	db         *gorm.DB
 }
 
 // NewRealtimeNotificationService 创建实时通知服务
-func NewRealtimeNotificationService(logger logger.LoggerInterface) *RealtimeNotificationService {
+func NewRealtimeNotificationService(logger logger.LoggerInterface, db *gorm.DB) *RealtimeNotificationService {
 	return &RealtimeNotificationService{
 		clients:  make(map[uint]*websocket.Conn),
 		stopChan: make(chan bool),
 		logger:   logger,
+		db:       db,
 	}
 }
 
@@ -139,7 +142,7 @@ func (s *RealtimeNotificationService) checkOverdueTasks() {
 		return
 	}
 
-	notificationService := NewNotificationService(s.logger)
+	notificationService := NewNotificationService(s.db, s.logger)
 
 	for _, task := range overdueTasks {
 		// 检查是否已经发送过逾期通知（避免重复通知）
@@ -191,7 +194,7 @@ func (s *RealtimeNotificationService) checkDueSoonTasks() {
 		return
 	}
 
-	notificationService := NewNotificationService(s.logger)
+	notificationService := NewNotificationService(s.db, s.logger)
 
 	for _, task := range dueSoonTasks {
 		// 检查是否已经发送过即将到期通知

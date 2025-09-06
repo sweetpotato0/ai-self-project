@@ -4,9 +4,11 @@ import (
 	"gin-web-framework/internal/service"
 	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // getUserIDFromContext 从上下文中获取用户ID
@@ -21,13 +23,15 @@ func getUserIDFromContext(c *gin.Context) uint {
 
 type NotificationHandler struct {
 	notificationService service.NotificationServiceInterface
-	logger             logger.LoggerInterface
+	logger              logger.LoggerInterface
+	db                  *gorm.DB
 }
 
-func NewNotificationHandler(notificationService service.NotificationServiceInterface, logger logger.LoggerInterface) *NotificationHandler {
+func NewNotificationHandler(notificationService service.NotificationServiceInterface, logger logger.LoggerInterface, db *gorm.DB) *NotificationHandler {
 	return &NotificationHandler{
 		notificationService: notificationService,
-		logger:             logger,
+		logger:              logger,
+		db:                  db,
 	}
 }
 
@@ -56,9 +60,9 @@ func (h *NotificationHandler) GetNotifications(c *gin.Context) {
 
 	response.Success(c, gin.H{
 		"notifications": result.Notifications,
-		"total": result.Total,
-		"page": result.Page,
-		"limit": result.Limit,
+		"total":         result.Total,
+		"page":          result.Page,
+		"limit":         result.Limit,
 	})
 }
 
@@ -116,7 +120,7 @@ func (h *NotificationHandler) CheckNotifications(c *gin.Context) {
 	}
 
 	// 创建通知管理器并运行检查
-	notificationManager := service.NewNotificationManager(h.logger)
+	notificationManager := service.NewNotificationManager(h.db, h.logger)
 	notificationManager.RunNotificationChecks()
 
 	response.Success(c, gin.H{
