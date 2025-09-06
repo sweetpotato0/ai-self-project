@@ -100,7 +100,7 @@ func (c *Container) initializeAllServices() {
 	articleService := service.NewArticleService(c.db, globalLogger)
 	notificationService := service.NewNotificationService(c.db, globalLogger)
 	statisticsService := service.NewStatisticsService(c.db, globalLogger)
-	categoryService := service.NewCategoryService(c.db, globalLogger)
+	categoryService := service.NewOptimizedCategoryService(c.db, globalLogger)
 	cacheService := service.NewCacheService(c.redis, globalLogger)
 	settingsService := service.NewSettingsService(c.db, globalLogger)
 	toolsService := service.NewToolsService(globalLogger)
