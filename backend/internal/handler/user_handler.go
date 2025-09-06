@@ -135,6 +135,27 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	})
 }
 
+// RefreshToken 刷新token
+func (h *UserHandler) RefreshToken(c *gin.Context) {
+	var req service.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request data: "+err.Error())
+		return
+	}
+
+	tokenResponse, err := h.userService.RefreshToken(req.Token)
+	if err != nil {
+		response.Unauthorized(c, err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"message": "Token refreshed successfully",
+		"token":   tokenResponse.Token,
+		"user":    tokenResponse.User,
+	})
+}
+
 // GetUsers 获取用户列表
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

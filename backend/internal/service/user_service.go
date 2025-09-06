@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserService struct{
+type UserService struct {
 	logger logger.LoggerInterface
 }
 
@@ -52,6 +52,10 @@ type UpdateProfileRequest struct {
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" validate:"required"`
 	NewPassword string `json:"new_password" validate:"required,min=6"`
+}
+
+type RefreshTokenRequest struct {
+	Token string `json:"token" binding:"required"`
 }
 
 type PaginatedUsers struct {
@@ -121,7 +125,7 @@ func (s *UserService) Login(req LoginRequest) (*LoginResponse, error) {
 	}
 
 	// 生成JWT token
-	token, err := jwt.GenerateToken(user.ID, user.Username, user.Email)
+	token, err := jwt.GenerateToken(user.ID, user.Username, user.Email, user.Role)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %v", err)
 	}
@@ -322,4 +326,38 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+// RefreshToken 刷新token（实现UserServiceInterface接口）
+func (s *UserService) RefreshToken(tokenString string) (*LoginResponse, error) {
+	// 使用JWT包的RefreshToken方法
+	newToken, err := jwt.RefreshToken(tokenString)
+	if err != nil {
+		s.logger.WithFields(map[string]any{"error": err}).Warn("Token refresh failed")
+		return nil, fmt.Errorf("token refresh failed: %v", err)
+	}
+
+	// 解析新token获取用户信息
+	claims, err := jwt.ParseToken(newToken)
+	if err != nil {
+		s.logger.WithFields(map[string]any{"error": err}).Error("Failed to parse new token")
+		return nil, fmt.Errorf("failed to parse new token: %v", err)
+	}
+
+	// 获取用户信息
+	user, err := s.GetUserByID(claims.UserID)
+	if err != nil {
+		s.logger.WithFields(map[string]any{"user_id": claims.UserID, "error": err}).Error("Failed to get user during token refresh")
+		return nil, fmt.Errorf("failed to get user: %v", err)
+	}
+
+	// 清除密码字段（安全考虑）
+	user.Password = ""
+
+	s.logger.WithFields(map[string]any{"user_id": claims.UserID, "username": claims.Username}).Info("Token refreshed successfully")
+
+	return &LoginResponse{
+		Token: newToken,
+		User:  *user,
+	}, nil
 }

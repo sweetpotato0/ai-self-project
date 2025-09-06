@@ -13,11 +13,12 @@ type Claims struct {
 	UserID   uint   `json:"user_id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
+	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken 生成JWT token
-func GenerateToken(userID uint, username, email string) (string, error) {
+func GenerateToken(userID uint, username, email, role string) (string, error) {
 	cfg := config.Get()
 	now := time.Now()
 
@@ -25,6 +26,7 @@ func GenerateToken(userID uint, username, email string) (string, error) {
 		UserID:   userID,
 		Username: username,
 		Email:    email,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(cfg.GetJWT().ExpireHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -71,5 +73,5 @@ func RefreshToken(tokenString string) (string, error) {
 		return "", errors.New("token does not need refresh")
 	}
 
-	return GenerateToken(claims.UserID, claims.Username, claims.Email)
+	return GenerateToken(claims.UserID, claims.Username, claims.Email, claims.Role)
 }

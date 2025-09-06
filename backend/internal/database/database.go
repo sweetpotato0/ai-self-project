@@ -219,6 +219,19 @@ func (dm *DatabaseManager) AutoMigrate() error {
 		&models.Article{},
 		&models.ArticleLike{},
 		&models.Category{},
+		// 英文学习相关模型
+		&models.LearningCategory{},
+		&models.Song{},
+		&models.Vocabulary{},
+		&models.UserProgress{},
+		&models.UserVocabulary{},
+		&models.LearningPlan{},
+		&models.StudySession{},
+		// 英文视频相关模型
+		&models.VideoSeries{},
+		&models.VideoEpisode{},
+		&models.VideoUserProgress{},
+		&models.VideoSeriesLike{},
 	); err != nil {
 		return fmt.Errorf("auto migrate failed: %w", err)
 	}
@@ -268,7 +281,63 @@ func (dm *DatabaseManager) SeedData() error {
 		}
 	}
 
+	// 创建默认管理员用户
+	if err := dm.createDefaultAdminUser(); err != nil {
+		logger.Error("Failed to create default admin user: " + err.Error())
+	}
+
 	logger.Info("Seed data initialized")
+	return nil
+}
+
+func (dm *DatabaseManager) createDefaultAdminUser() error {
+	// 先尝试将用户ID=1设置为管理员
+	var userOne models.User
+	if err := dm.db.Where("id = ?", 1).First(&userOne).Error; err == nil {
+		// 用户ID=1存在，更新为admin角色
+		if userOne.Role != models.RoleAdmin {
+			if err := dm.db.Model(&userOne).Update("role", models.RoleAdmin).Error; err != nil {
+				return fmt.Errorf("failed to update user ID=1 role: %w", err)
+			}
+			logger.Info("Updated user ID=1 role to admin")
+		}
+		return nil
+	}
+
+	// 再尝试更新现有的admin用户添加role
+	var existingUser models.User
+	if err := dm.db.Where("username = ?", "admin").First(&existingUser).Error; err == nil {
+		// admin用户存在，更新为admin角色
+		if existingUser.Role != models.RoleAdmin {
+			if err := dm.db.Model(&existingUser).Update("role", models.RoleAdmin).Error; err != nil {
+				return fmt.Errorf("failed to update admin user role: %w", err)
+			}
+			logger.Info("Updated existing admin user role to admin")
+		}
+		return nil
+	}
+
+	// 检查是否已存在admin角色用户
+	var adminUser models.User
+	if err := dm.db.Where("role = ?", models.RoleAdmin).First(&adminUser).Error; err == nil {
+		// 管理员用户已存在
+		return nil
+	}
+
+	// 创建默认管理员用户
+	adminUser = models.User{
+		Username: "admin",
+		Email:    "admin@example.com", 
+		Nickname: "系统管理员",
+		Password: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // password
+		Role:     models.RoleAdmin,
+	}
+
+	if err := dm.db.Create(&adminUser).Error; err != nil {
+		return fmt.Errorf("failed to create admin user: %w", err)
+	}
+
+	logger.Info("Default admin user created (username: admin, password: password)")
 	return nil
 }
 
