@@ -3,18 +3,21 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/pkg/logger"
 	"time"
+
+	"gorm.io/gorm"
 )
 
-type NotificationService struct{
+type NotificationService struct {
+	db     *gorm.DB
 	logger logger.LoggerInterface
 }
 
-func NewNotificationService(logger logger.LoggerInterface) *NotificationService {
+func NewNotificationService(db *gorm.DB, logger logger.LoggerInterface) *NotificationService {
 	return &NotificationService{
+		db:     db,
 		logger: logger,
 	}
 }
@@ -47,7 +50,6 @@ type PaginatedNotifications struct {
 
 // CreateNotification 创建通知
 func (s *NotificationService) CreateNotification(req CreateNotificationRequest) (*models.Notification, error) {
-	db := database.GetDB()
 
 	dataJSON := ""
 	if req.Data != nil {
@@ -65,7 +67,7 @@ func (s *NotificationService) CreateNotification(req CreateNotificationRequest) 
 		Data:    dataJSON,
 	}
 
-	if err := db.Create(notification).Error; err != nil {
+	if err := s.db.Create(notification).Error; err != nil {
 		return nil, fmt.Errorf("failed to create notification: %v", err)
 	}
 
@@ -74,12 +76,11 @@ func (s *NotificationService) CreateNotification(req CreateNotificationRequest) 
 
 // GetNotifications 获取用户通知列表（分页）
 func (s *NotificationService) GetNotifications(userID uint, filter NotificationFilter) (*PaginatedNotifications, error) {
-	db := database.GetDB()
 
 	var notifications []*models.Notification
 	var total int64
 
-	query := db.Where("user_id = ?", userID)
+	query := s.db.Where("user_id = ?", userID)
 
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
@@ -115,10 +116,9 @@ func (s *NotificationService) GetNotifications(userID uint, filter NotificationF
 
 // GetUserNotifications 获取用户通知列表（向后兼容）
 func (s *NotificationService) GetUserNotifications(userID uint, limit int) ([]models.Notification, error) {
-	db := database.GetDB()
 
 	var notifications []models.Notification
-	query := db.Where("user_id = ?", userID).Order("created_at DESC")
+	query := s.db.Where("user_id = ?", userID).Order("created_at DESC")
 
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -133,9 +133,8 @@ func (s *NotificationService) GetUserNotifications(userID uint, limit int) ([]mo
 
 // MarkAsRead 标记通知为已读
 func (s *NotificationService) MarkAsRead(notificationID, userID uint) error {
-	db := database.GetDB()
 
-	if err := db.Model(&models.Notification{}).
+	if err := s.db.Model(&models.Notification{}).
 		Where("id = ? AND user_id = ?", notificationID, userID).
 		Update("is_read", true).Error; err != nil {
 		return fmt.Errorf("failed to mark notification as read: %v", err)
@@ -146,9 +145,8 @@ func (s *NotificationService) MarkAsRead(notificationID, userID uint) error {
 
 // MarkAllAsRead 标记所有通知为已读
 func (s *NotificationService) MarkAllAsRead(userID uint) error {
-	db := database.GetDB()
 
-	if err := db.Model(&models.Notification{}).
+	if err := s.db.Model(&models.Notification{}).
 		Where("user_id = ? AND is_read = ?", userID, false).
 		Update("is_read", true).Error; err != nil {
 		return fmt.Errorf("failed to mark all notifications as read: %v", err)
@@ -159,9 +157,8 @@ func (s *NotificationService) MarkAllAsRead(userID uint) error {
 
 // DeleteNotification 删除通知
 func (s *NotificationService) DeleteNotification(notificationID, userID uint) error {
-	db := database.GetDB()
 
-	if err := db.Where("id = ? AND user_id = ?", notificationID, userID).
+	if err := s.db.Where("id = ? AND user_id = ?", notificationID, userID).
 		Delete(&models.Notification{}).Error; err != nil {
 		return fmt.Errorf("failed to delete notification: %v", err)
 	}
@@ -171,10 +168,9 @@ func (s *NotificationService) DeleteNotification(notificationID, userID uint) er
 
 // GetUnreadCount 获取未读通知数量
 func (s *NotificationService) GetUnreadCount(userID uint) (int64, error) {
-	db := database.GetDB()
 
 	var count int64
-	if err := db.Model(&models.Notification{}).
+	if err := s.db.Model(&models.Notification{}).
 		Where("user_id = ? AND is_read = ?", userID, false).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("failed to get unread count: %v", err)
@@ -218,10 +214,9 @@ func (s *NotificationService) CreateTaskNotification(userID uint, taskTitle stri
 
 // GetUnreadNotifications 获取未读通知
 func (s *NotificationService) GetUnreadNotifications(userID uint) ([]*models.Notification, error) {
-	db := database.GetDB()
 
 	var notifications []*models.Notification
-	if err := db.Where("user_id = ? AND is_read = ?", userID, false).
+	if err := s.db.Where("user_id = ? AND is_read = ?", userID, false).
 		Order("created_at DESC").
 		Find(&notifications).Error; err != nil {
 		return nil, fmt.Errorf("failed to get unread notifications: %v", err)
@@ -269,9 +264,8 @@ func (s *NotificationService) CreateTaskCompletedNotification(userID uint, todoI
 
 // BatchMarkAsRead 批量标记为已读
 func (s *NotificationService) BatchMarkAsRead(ids []uint, userID uint) error {
-	db := database.GetDB()
 
-	if err := db.Model(&models.Notification{}).
+	if err := s.db.Model(&models.Notification{}).
 		Where("id IN ? AND user_id = ?", ids, userID).
 		Update("is_read", true).Error; err != nil {
 		return fmt.Errorf("failed to batch mark notifications as read: %v", err)
@@ -282,9 +276,8 @@ func (s *NotificationService) BatchMarkAsRead(ids []uint, userID uint) error {
 
 // BatchDelete 批量删除通知
 func (s *NotificationService) BatchDelete(ids []uint, userID uint) error {
-	db := database.GetDB()
 
-	if err := db.Where("id IN ? AND user_id = ?", ids, userID).
+	if err := s.db.Where("id IN ? AND user_id = ?", ids, userID).
 		Delete(&models.Notification{}).Error; err != nil {
 		return fmt.Errorf("failed to batch delete notifications: %v", err)
 	}

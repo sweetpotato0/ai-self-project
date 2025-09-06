@@ -108,7 +108,7 @@ func (s *TodoService) GetTodoList(userID uint) ([]models.Todo, error) {
 func (s *TodoService) GetTodoByID(id uint, userID uint) (*models.Todo, error) {
 
 	var todo models.Todo
-	err := db.Where("id = ? AND created_by = ?", id, userID).
+	err := s.db.Where("id = ? AND created_by = ?", id, userID).
 		Preload("Priority").
 		Preload("Category").
 		First(&todo).Error
@@ -180,7 +180,7 @@ func (s *TodoService) UpdateTodo(todoID, userID uint, req UpdateTodoRequest) (*m
 // DeleteTodo 删除TODO
 func (s *TodoService) DeleteTodo(todoID, userID uint) error {
 
-	result := db.Where("id = ? AND created_by = ?", todoID, userID).Delete(&models.Todo{})
+	result := s.db.Where("id = ? AND created_by = ?", todoID, userID).Delete(&models.Todo{})
 	if result.RowsAffected == 0 {
 		return errors.New("todo not found")
 	}
@@ -192,7 +192,7 @@ func (s *TodoService) DeleteTodo(todoID, userID uint) error {
 func (s *TodoService) BatchDelete(ids []uint, userID uint) error {
 
 	// 批量删除指定用户的TODO
-	result := db.Where("id IN ? AND created_by = ?", ids, userID).Delete(&models.Todo{})
+	result := s.db.Where("id IN ? AND created_by = ?", ids, userID).Delete(&models.Todo{})
 	if result.Error != nil {
 		return fmt.Errorf("failed to batch delete todos: %v", result.Error)
 	}
@@ -209,7 +209,7 @@ func (s *TodoService) BatchDelete(ids []uint, userID uint) error {
 func (s *TodoService) BatchUpdateStatus(ids []uint, userID uint, status string) error {
 
 	// 批量更新指定用户的TODO状态
-	result := db.Model(&models.Todo{}).
+	result := s.db.Model(&models.Todo{}).
 		Where("id IN ? AND created_by = ?", ids, userID).
 		Update("status", status)
 
@@ -239,7 +239,7 @@ func (s *TodoService) GetOverdueTodos(userID uint) ([]*models.Todo, error) {
 	var todos []*models.Todo
 	now := time.Now()
 
-	err := db.Where("created_by = ? AND due_date < ? AND status != 'completed'", userID, now).
+	err := s.db.Where("created_by = ? AND due_date < ? AND status != 'completed'", userID, now).
 		Preload("Priority").
 		Preload("Category").
 		Order("due_date ASC").
@@ -382,7 +382,7 @@ func (s *TodoService) GetTodos(userID uint, filter TodoFilter) (*PaginatedTodos,
 func (s *TodoService) GetTodosByCategory(userID uint, categoryID uint) ([]*models.Todo, error) {
 
 	var todos []*models.Todo
-	err := db.Where("created_by = ? AND category_id = ?", userID, categoryID).
+	err := s.db.Where("created_by = ? AND category_id = ?", userID, categoryID).
 		Preload("Priority").
 		Preload("Category").
 		Order("created_at DESC").
@@ -399,7 +399,7 @@ func (s *TodoService) GetTodosByCategory(userID uint, categoryID uint) ([]*model
 func (s *TodoService) GetTodosByPriority(userID uint, priority string) ([]*models.Todo, error) {
 
 	var todos []*models.Todo
-	err := db.Joins("JOIN priorities ON todos.priority_id = priorities.id").
+	err := s.db.Joins("JOIN priorities ON todos.priority_id = priorities.id").
 		Where("todos.created_by = ? AND priorities.name = ?", userID, priority).
 		Preload("Priority").
 		Preload("Category").
@@ -417,7 +417,7 @@ func (s *TodoService) GetTodosByPriority(userID uint, priority string) ([]*model
 func (s *TodoService) MarkCompleted(id uint, userID uint) error {
 
 	now := time.Now()
-	result := db.Model(&models.Todo{}).
+	result := s.db.Model(&models.Todo{}).
 		Where("id = ? AND created_by = ?", id, userID).
 		Updates(map[string]interface{}{
 			"status":       "completed",
@@ -438,7 +438,7 @@ func (s *TodoService) MarkCompleted(id uint, userID uint) error {
 // MarkInProgress 标记为进行中（实现TodoServiceInterface接口）
 func (s *TodoService) MarkInProgress(id uint, userID uint) error {
 
-	result := db.Model(&models.Todo{}).
+	result := s.db.Model(&models.Todo{}).
 		Where("id = ? AND created_by = ?", id, userID).
 		Update("status", "in_progress")
 
@@ -456,7 +456,7 @@ func (s *TodoService) MarkInProgress(id uint, userID uint) error {
 // MarkCancelled 标记为已取消（实现TodoServiceInterface接口）
 func (s *TodoService) MarkCancelled(id uint, userID uint) error {
 
-	result := db.Model(&models.Todo{}).
+	result := s.db.Model(&models.Todo{}).
 		Where("id = ? AND created_by = ?", id, userID).
 		Update("status", "cancelled")
 

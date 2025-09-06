@@ -98,9 +98,9 @@ func (c *Container) initializeAllServices() {
 	userService := service.NewUserService(c.db, globalLogger)
 	todoService := service.NewTodoService(c.db, globalLogger)
 	articleService := service.NewArticleService(c.db, globalLogger)
-	notificationService := service.NewNotificationService(globalLogger)
-	statisticsService := service.NewStatisticsService(globalLogger)
-	categoryService := service.NewCategoryService(globalLogger)
+	notificationService := service.NewNotificationService(c.db, globalLogger)
+	statisticsService := service.NewStatisticsService(c.db, globalLogger)
+	categoryService := service.NewCategoryService(c.db, globalLogger)
 	cacheService := service.NewCacheService(c.redis, globalLogger)
 	settingsService := service.NewSettingsService(c.db, globalLogger)
 	toolsService := service.NewToolsService(globalLogger)
@@ -250,7 +250,6 @@ func (c *Container) GetSettingsHandler() *handler.SettingsHandler {
 	return c.services["settings_handler"].(*handler.SettingsHandler)
 }
 
-
 func (c *Container) GetToolsService() service.ToolsServiceInterface {
 	return c.services["tools_service"].(service.ToolsServiceInterface)
 }
@@ -359,7 +358,6 @@ func InitializeContainer() error {
 	logger.Info("Container initialized successfully with all services pre-loaded")
 	return nil
 }
-
 
 // GetUploadHandler 获取上传处理器
 func (c *Container) GetUploadHandler() *handler.UploadHandler {

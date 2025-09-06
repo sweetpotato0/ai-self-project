@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"gin-web-framework/internal/database"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/pkg/logger"
 	"strconv"
@@ -18,20 +17,11 @@ type StatisticsService struct {
 }
 
 // NewStatisticsService 创建统计服务实例
-func NewStatisticsService(logger logger.LoggerInterface) *StatisticsService {
+func NewStatisticsService(db *gorm.DB, logger logger.LoggerInterface) *StatisticsService {
 	return &StatisticsService{
+		db:     db,
 		logger: logger,
 	}
-}
-
-// getDB 获取数据库连接
-func (s *StatisticsService) getDB() *gorm.DB {
-	// 每次都重新获取数据库连接，确保连接是活跃的
-	db := database.GetDB()
-	if db == nil {
-		panic("Database connection is nil")
-	}
-	return db
 }
 
 // StatisticsType 统计类型
@@ -96,10 +86,9 @@ func (s *StatisticsService) GetTrends(statType StatisticsType, userID uint, days
 // getTodoStatistics 获取任务统计
 func (s *StatisticsService) GetTodoStatistics(userID uint) (*TodoStatistics, error) {
 	var stats TodoStatistics
-	db := s.getDB()
 
 	// 总任务数
-	if err := db.Model(&models.Todo{}).Where("created_by = ?", userID).Count(&stats.Total).Error; err != nil {
+	if err := s.db.Model(&models.Todo{}).Where("created_by = ?", userID).Count(&stats.Total).Error; err != nil {
 		return nil, fmt.Errorf("failed to count total todos: %w", err)
 	}
 
@@ -109,7 +98,7 @@ func (s *StatisticsService) GetTodoStatistics(userID uint) (*TodoStatistics, err
 		Count  int64  `json:"count"`
 	}
 
-	if err := db.Model(&models.Todo{}).
+	if err := s.db.Model(&models.Todo{}).
 		Select("status, COUNT(*) as count").
 		Where("created_by = ?", userID).
 		Group("status").
@@ -133,7 +122,7 @@ func (s *StatisticsService) GetTodoStatistics(userID uint) (*TodoStatistics, err
 
 	// 逾期任务数
 	now := time.Now()
-	if err := db.Model(&models.Todo{}).
+	if err := s.db.Model(&models.Todo{}).
 		Where("created_by = ? AND due_date < ? AND status NOT IN (?)",
 			userID, now, []string{"completed", "cancelled"}).
 		Count(&stats.Overdue).Error; err != nil {
@@ -146,10 +135,9 @@ func (s *StatisticsService) GetTodoStatistics(userID uint) (*TodoStatistics, err
 // getArticleStatistics 获取文章统计
 func (s *StatisticsService) GetArticleStatistics(userID uint) (*ArticleStatistics, error) {
 	var stats ArticleStatistics
-	db := s.getDB()
 
 	// 总文章数
-	if err := db.Model(&models.Article{}).Where("created_by = ?", userID).Count(&stats.Total).Error; err != nil {
+	if err := s.db.Model(&models.Article{}).Where("created_by = ?", userID).Count(&stats.Total).Error; err != nil {
 		return nil, fmt.Errorf("failed to count total articles: %w", err)
 	}
 
@@ -159,7 +147,7 @@ func (s *StatisticsService) GetArticleStatistics(userID uint) (*ArticleStatistic
 		Count  int64  `json:"count"`
 	}
 
-	if err := db.Model(&models.Article{}).
+	if err := s.db.Model(&models.Article{}).
 		Select("status, COUNT(*) as count").
 		Where("created_by = ?", userID).
 		Group("status").
@@ -184,7 +172,7 @@ func (s *StatisticsService) GetArticleStatistics(userID uint) (*ArticleStatistic
 		TotalViews int64 `json:"total_views"`
 		TotalLikes int64 `json:"total_likes"`
 	}
-	if err := db.Model(&models.Article{}).
+	if err := s.db.Model(&models.Article{}).
 		Where("created_by = ?", userID).
 		Select("COALESCE(SUM(view_count), 0) as total_views, COALESCE(SUM(like_count), 0) as total_likes").
 		Scan(&result).Error; err != nil {
@@ -205,7 +193,7 @@ func (s *StatisticsService) GetTodoTrends(userID uint, days int) ([]TrendData, e
 	startDate := endDate.AddDate(0, 0, -days+1)
 
 	// 按日期统计任务完成数
-	rows, err := s.getDB().Model(&models.Todo{}).
+	rows, err := s.db.Model(&models.Todo{}).
 		Select("DATE(completed_at) as date, COUNT(*) as count").
 		Where("created_by = ? AND completed_at BETWEEN ? AND ?", userID, startDate, endDate).
 		Group("DATE(completed_at)").
@@ -251,7 +239,7 @@ func (s *StatisticsService) GetArticleTrends(userID uint, days int) ([]TrendData
 	startDate := endDate.AddDate(0, 0, -days+1)
 
 	// 按日期统计文章浏览量
-	rows, err := s.getDB().Model(&models.Article{}).
+	rows, err := s.db.Model(&models.Article{}).
 		Select("DATE(created_at) as date, SUM(view_count) as count").
 		Where("created_by = ? AND created_at BETWEEN ? AND ?", userID, startDate, endDate).
 		Group("DATE(created_at)").
@@ -315,237 +303,228 @@ func ValidateDays(daysStr string) (int, error) {
 
 // GetActiveUsersCount 获取活跃用户数量
 func (s *StatisticsService) GetActiveUsersCount(days int) (int64, error) {
-	db := database.GetDB()
-	
+
 	// 计算指定天数前的时间
 	startDate := time.Now().AddDate(0, 0, -days)
-	
+
 	var count int64
-	if err := db.Model(&models.User{}).
+	if err := s.db.Model(&models.User{}).
 		Where("updated_at >= ?", startDate).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("failed to get active users count: %v", err)
 	}
-	
+
 	return count, nil
 }
 
 // GetDailyActiveUsers 获取每日活跃用户数趋势
 func (s *StatisticsService) GetDailyActiveUsers(days int) ([]TrendData, error) {
-	db := database.GetDB()
-	
+
 	var trends []TrendData
-	
+
 	// 生成过去几天的数据
 	for i := days - 1; i >= 0; i-- {
 		date := time.Now().AddDate(0, 0, -i)
 		startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 		endOfDay := startOfDay.Add(24 * time.Hour)
-		
+
 		var count int64
-		if err := db.Model(&models.User{}).
+		if err := s.db.Model(&models.User{}).
 			Where("updated_at >= ? AND updated_at < ?", startOfDay, endOfDay).
 			Count(&count).Error; err != nil {
 			return nil, fmt.Errorf("failed to get daily active users: %v", err)
 		}
-		
+
 		trends = append(trends, TrendData{
 			Date:  startOfDay.Format("2006-01-02"),
 			Count: count,
 		})
 	}
-	
+
 	return trends, nil
 }
 
 // GetSystemStats 获取系统统计信息
 func (s *StatisticsService) GetSystemStats() (map[string]interface{}, error) {
-	db := database.GetDB()
-	
+
 	stats := make(map[string]interface{})
-	
+
 	// 总用户数
 	var totalUsers int64
-	if err := db.Model(&models.User{}).Count(&totalUsers).Error; err != nil {
+	if err := s.db.Model(&models.User{}).Count(&totalUsers).Error; err != nil {
 		return nil, fmt.Errorf("failed to get total users: %v", err)
 	}
 	stats["total_users"] = totalUsers
-	
+
 	// 总任务数
 	var totalTodos int64
-	if err := db.Model(&models.Todo{}).Count(&totalTodos).Error; err != nil {
+	if err := s.db.Model(&models.Todo{}).Count(&totalTodos).Error; err != nil {
 		return nil, fmt.Errorf("failed to get total todos: %v", err)
 	}
 	stats["total_todos"] = totalTodos
-	
+
 	// 总文章数
 	var totalArticles int64
-	if err := db.Model(&models.Article{}).Count(&totalArticles).Error; err != nil {
+	if err := s.db.Model(&models.Article{}).Count(&totalArticles).Error; err != nil {
 		return nil, fmt.Errorf("failed to get total articles: %v", err)
 	}
 	stats["total_articles"] = totalArticles
-	
+
 	// 活跃用户数（最近7天）
 	activeUsers, err := s.GetActiveUsersCount(7)
 	if err != nil {
 		return nil, err
 	}
 	stats["active_users_7d"] = activeUsers
-	
+
 	return stats, nil
 }
 
 // GetTodosByStatus 获取各状态任务数量统计
 func (s *StatisticsService) GetTodosByStatus(userID uint) (map[string]int64, error) {
-	db := s.getDB()
 	result := make(map[string]int64)
-	
+
 	statuses := []string{"pending", "in_progress", "completed", "cancelled"}
-	
+
 	for _, status := range statuses {
 		var count int64
-		if err := db.Model(&models.Todo{}).
+		if err := s.db.Model(&models.Todo{}).
 			Where("created_by = ? AND status = ?", userID, status).
 			Count(&count).Error; err != nil {
 			return nil, fmt.Errorf("failed to count todos by status %s: %v", status, err)
 		}
 		result[status] = count
 	}
-	
+
 	return result, nil
 }
 
-// GetTodosByPriority 获取各优先级任务数量统计  
+// GetTodosByPriority 获取各优先级任务数量统计
 func (s *StatisticsService) GetTodosByPriority(userID uint) (map[string]int64, error) {
-	db := s.getDB()
 	result := make(map[string]int64)
-	
+
 	priorities := []string{"low", "medium", "high", "urgent"}
-	
+
 	for _, priority := range priorities {
 		var count int64
-		if err := db.Model(&models.Todo{}).
+		if err := s.db.Model(&models.Todo{}).
 			Where("created_by = ? AND priority = ?", userID, priority).
 			Count(&count).Error; err != nil {
 			return nil, fmt.Errorf("failed to count todos by priority %s: %v", priority, err)
 		}
 		result[priority] = count
 	}
-	
+
 	return result, nil
 }
 
 // GetTodosByCategory 获取各分类任务数量统计
 func (s *StatisticsService) GetTodosByCategory(userID uint) (map[string]int64, error) {
-	db := s.getDB()
 	result := make(map[string]int64)
-	
+
 	// 获取用户的所有分类
 	var categories []models.Category
-	if err := db.Where("created_by = ?", userID).Find(&categories).Error; err != nil {
+	if err := s.db.Where("created_by = ?", userID).Find(&categories).Error; err != nil {
 		return nil, fmt.Errorf("failed to get categories: %v", err)
 	}
-	
+
 	// 统计每个分类的任务数量
 	for _, category := range categories {
 		var count int64
-		if err := db.Model(&models.Todo{}).
+		if err := s.db.Model(&models.Todo{}).
 			Where("created_by = ? AND category_id = ?", userID, category.ID).
 			Count(&count).Error; err != nil {
 			return nil, fmt.Errorf("failed to count todos for category %d: %v", category.ID, err)
 		}
 		result[category.Name] = count
 	}
-	
+
 	// 统计未分类的任务
 	var uncategorizedCount int64
-	if err := db.Model(&models.Todo{}).
+	if err := s.db.Model(&models.Todo{}).
 		Where("created_by = ? AND (category_id IS NULL OR category_id = 0)", userID).
 		Count(&uncategorizedCount).Error; err != nil {
 		return nil, fmt.Errorf("failed to count uncategorized todos: %v", err)
 	}
 	result["uncategorized"] = uncategorizedCount
-	
+
 	return result, nil
 }
 
 // GetArticlesByStatus 获取各状态文章数量统计
 func (s *StatisticsService) GetArticlesByStatus(userID uint) (map[string]int64, error) {
-	db := s.getDB()
 	result := make(map[string]int64)
-	
+
 	statuses := []string{"draft", "published", "archived"}
-	
+
 	for _, status := range statuses {
 		var count int64
-		if err := db.Model(&models.Article{}).
+		if err := s.db.Model(&models.Article{}).
 			Where("created_by = ? AND status = ?", userID, status).
 			Count(&count).Error; err != nil {
 			return nil, fmt.Errorf("failed to count articles by status %s: %v", status, err)
 		}
 		result[status] = count
 	}
-	
+
 	return result, nil
 }
 
 // GetTopArticles 获取热门文章（按浏览量排序）
 func (s *StatisticsService) GetTopArticles(userID uint, limit int) ([]*models.Article, error) {
-	db := s.getDB()
-	
+
 	var articles []*models.Article
-	if err := db.Where("created_by = ?", userID).
+	if err := s.db.Where("created_by = ?", userID).
 		Order("view_count DESC").
 		Limit(limit).
 		Find(&articles).Error; err != nil {
 		return nil, fmt.Errorf("failed to get top articles: %v", err)
 	}
-	
+
 	return articles, nil
 }
 
 // GetUserActivityStats 获取用户活动统计
 func (s *StatisticsService) GetUserActivityStats(userID uint, days int) (map[string]interface{}, error) {
-	db := s.getDB()
 	stats := make(map[string]interface{})
-	
+
 	startDate := time.Now().AddDate(0, 0, -days)
-	
+
 	// 创建的任务数
 	var createdTodos int64
-	if err := db.Model(&models.Todo{}).
+	if err := s.db.Model(&models.Todo{}).
 		Where("created_by = ? AND created_at >= ?", userID, startDate).
 		Count(&createdTodos).Error; err != nil {
 		return nil, fmt.Errorf("failed to count created todos: %v", err)
 	}
 	stats["created_todos"] = createdTodos
-	
+
 	// 完成的任务数
 	var completedTodos int64
-	if err := db.Model(&models.Todo{}).
+	if err := s.db.Model(&models.Todo{}).
 		Where("created_by = ? AND status = 'completed' AND updated_at >= ?", userID, startDate).
 		Count(&completedTodos).Error; err != nil {
 		return nil, fmt.Errorf("failed to count completed todos: %v", err)
 	}
 	stats["completed_todos"] = completedTodos
-	
+
 	// 创建的文章数
 	var createdArticles int64
-	if err := db.Model(&models.Article{}).
+	if err := s.db.Model(&models.Article{}).
 		Where("created_by = ? AND created_at >= ?", userID, startDate).
 		Count(&createdArticles).Error; err != nil {
 		return nil, fmt.Errorf("failed to count created articles: %v", err)
 	}
 	stats["created_articles"] = createdArticles
-	
+
 	// 发布的文章数
 	var publishedArticles int64
-	if err := db.Model(&models.Article{}).
+	if err := s.db.Model(&models.Article{}).
 		Where("created_by = ? AND status = 'published' AND updated_at >= ?", userID, startDate).
 		Count(&publishedArticles).Error; err != nil {
 		return nil, fmt.Errorf("failed to count published articles: %v", err)
 	}
 	stats["published_articles"] = publishedArticles
-	
+
 	return stats, nil
 }

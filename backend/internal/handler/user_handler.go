@@ -4,6 +4,7 @@ import (
 	"gin-web-framework/internal/service"
 	"gin-web-framework/pkg/logger"
 	"gin-web-framework/pkg/response"
+	"gin-web-framework/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"strconv"
 )
@@ -67,13 +68,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 
 // GetProfile 获取用户资料
 func (h *UserHandler) GetProfile(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Unauthorized(c, "User not authenticated")
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		response.Unauthorized(c, err.Error())
 		return
 	}
 
-	user, err := h.userService.GetUserByID(userID.(uint))
+	user, err := h.userService.GetUserByID(userID)
 	if err != nil {
 		response.NotFound(c, err.Error())
 		return
@@ -86,9 +87,9 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 
 // UpdateProfile 更新用户资料
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Unauthorized(c, "User not authenticated")
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		response.Unauthorized(c, err.Error())
 		return
 	}
 
@@ -98,7 +99,7 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.UpdateProfile(userID.(uint), req)
+	user, err := h.userService.UpdateProfile(userID, req)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
@@ -112,9 +113,9 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 
 // ChangePassword 修改密码
 func (h *UserHandler) ChangePassword(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		response.Unauthorized(c, "User not authenticated")
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		response.Unauthorized(c, err.Error())
 		return
 	}
 
@@ -124,7 +125,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	err := h.userService.ChangePassword(userID.(uint), req)
+	err = h.userService.ChangePassword(userID, req)
 	if err != nil {
 		response.BadRequest(c, err.Error())
 		return
