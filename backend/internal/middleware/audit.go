@@ -14,20 +14,29 @@ import (
 	"gorm.io/gorm"
 )
 
-type AuditMiddleware struct {
+const (
+	// 最大请求体大小限制 (1MB)
+	maxRequestBodySize = 1024 * 1024
+	// 最大响应体大小限制 (512KB)
+	maxResponseBodySize = 512 * 1024
+	// 截断提示
+	truncationSuffix = "...[TRUNCATED]"
+)
+
+type OptimizedAuditMiddleware struct {
 	db     *gorm.DB
 	logger *logger.Logger
 }
 
-func NewAuditMiddleware(db *gorm.DB, logger *logger.Logger) *AuditMiddleware {
-	return &AuditMiddleware{
+func NewOptimizedAuditMiddleware(db *gorm.DB, logger *logger.Logger) *OptimizedAuditMiddleware {
+	return &OptimizedAuditMiddleware{
 		db:     db,
 		logger: logger,
 	}
 }
 
-// AuditLog 审计日志中间件
-func (a *AuditMiddleware) AuditLog() gin.HandlerFunc {
+// AuditLog 优化的审计日志中间件
+func (a *OptimizedAuditMiddleware) AuditLog() gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		// 排除不需要审计的路径
 		if a.shouldSkipAudit(c.Request.RequestURI) {
@@ -37,63 +46,107 @@ func (a *AuditMiddleware) AuditLog() gin.HandlerFunc {
 
 		startTime := time.Now()
 		
-		// 记录请求体
-		var requestBody []byte
-		if c.Request.Body != nil {
-			requestBody, _ = io.ReadAll(c.Request.Body)
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-		}
+		// 安全地读取请求体（带大小限制）
+		requestBody := a.safeReadRequestBody(c)
 
-		// 使用自定义 ResponseWriter 来捕获响应
-		w := &responseWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
+		// 使用优化的 ResponseWriter
+		w := &optimizedResponseWriter{
+			ResponseWriter: c.Writer,
+			body:          &bytes.Buffer{},
+			maxSize:       maxResponseBodySize,
+		}
 		c.Writer = w
 
 		// 处理请求
 		c.Next()
 
-		// 记录审计日志
-		a.logAuditRecord(c, requestBody, w.body.Bytes(), startTime)
+		// 异步记录审计日志（避免阻塞请求）
+		go a.logAuditRecordAsync(c, requestBody, w.getBody(), startTime)
 	})
 }
 
-type responseWriter struct {
+// 优化的响应写入器
+type optimizedResponseWriter struct {
 	gin.ResponseWriter
-	body *bytes.Buffer
+	body    *bytes.Buffer
+	maxSize int
+	written bool
 }
 
-func (w responseWriter) Write(b []byte) (int, error) {
-	w.body.Write(b)
+func (w *optimizedResponseWriter) Write(b []byte) (int, error) {
+	// 限制响应体缓存大小
+	if w.body.Len()+len(b) <= w.maxSize {
+		w.body.Write(b)
+	} else if !w.written {
+		// 只在第一次超限时写入截断信息
+		remaining := w.maxSize - w.body.Len()
+		if remaining > len(truncationSuffix) {
+			w.body.Write(b[:remaining-len(truncationSuffix)])
+			w.body.WriteString(truncationSuffix)
+		}
+		w.written = true
+	}
 	return w.ResponseWriter.Write(b)
 }
 
-func (a *AuditMiddleware) logAuditRecord(c *gin.Context, requestBody, responseBody []byte, startTime time.Time) {
+func (w *optimizedResponseWriter) getBody() []byte {
+	return w.body.Bytes()
+}
+
+// 安全地读取请求体
+func (a *OptimizedAuditMiddleware) safeReadRequestBody(c *gin.Context) string {
+	if c.Request.Body == nil {
+		return ""
+	}
+
+	// 使用LimitReader防止内存耗尽
+	limitReader := io.LimitReader(c.Request.Body, maxRequestBodySize+1)
+	requestBody, err := io.ReadAll(limitReader)
+	if err != nil {
+		a.logger.Errorf("Failed to read request body: %v", err)
+		return ""
+	}
+
+	// 重置请求体供后续处理
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+
+	// 检查是否被截断
+	bodyStr := string(requestBody)
+	if len(requestBody) > maxRequestBodySize {
+		bodyStr = bodyStr[:maxRequestBodySize-len(truncationSuffix)] + truncationSuffix
+	}
+
+	return a.sanitizeRequestBody(bodyStr)
+}
+
+// 异步记录审计日志
+func (a *OptimizedAuditMiddleware) logAuditRecordAsync(c *gin.Context, requestBody string, responseBody []byte, startTime time.Time) {
 	// 获取用户信息
-	userID, _ := c.Get("user_id")
-	username, _ := c.Get("username")
+	userID := a.getUserID(c.GetUint("user_id"))
+	username := c.GetString("username")
 
 	// 构建审计日志记录
 	auditLog := &model.AuditLog{
-		UserID:       getUserID(userID),
-		Username:     getUsernameStr(username),
+		UserID:       userID,
+		Username:     username,
 		Action:       a.getActionName(c.Request.Method),
 		Resource:     a.getResourceName(c.Request.RequestURI),
 		Method:       c.Request.Method,
 		Path:         c.Request.RequestURI,
 		IPAddress:    c.ClientIP(),
 		UserAgent:    c.Request.UserAgent(),
-		RequestBody:  a.sanitizeRequestBody(requestBody),
+		RequestBody:  requestBody,
 		ResponseBody: a.sanitizeResponseBody(responseBody),
 		StatusCode:   c.Writer.Status(),
 		Duration:     time.Since(startTime),
 		Timestamp:    startTime,
 	}
 
-	// 异步保存到数据库
-	go func() {
-		if err := a.db.Create(auditLog).Error; err != nil {
-			a.logger.Errorf("Failed to save audit log: %v", err)
-		}
-	}()
+	// 保存到数据库（带错误恢复）
+	if err := a.db.Create(auditLog).Error; err != nil {
+		a.logger.Errorf("Failed to save audit log: %v", err)
+		// 这里可以添加降级策略，比如写入文件或发送到队列
+	}
 
 	// 记录结构化日志
 	a.logger.WithFields(map[string]interface{}{
@@ -107,17 +160,21 @@ func (a *AuditMiddleware) logAuditRecord(c *gin.Context, requestBody, responseBo
 		"ip":          auditLog.IPAddress,
 		"status":      auditLog.StatusCode,
 		"duration_ms": auditLog.Duration.Milliseconds(),
+		"req_size":    len(requestBody),
+		"resp_size":   len(responseBody),
 	}).Info("Audit log recorded")
 }
 
-// shouldSkipAudit 判断是否跳过审计日志
-func (a *AuditMiddleware) shouldSkipAudit(path string) bool {
+// 辅助方法保持与原版本兼容
+func (a *OptimizedAuditMiddleware) shouldSkipAudit(path string) bool {
 	skipPaths := []string{
 		"/api/v1/health",
-		"/api/v1/metrics",
+		"/api/v1/metrics", 
 		"/api/v1/ws",
 		"/uploads/",
 		"/api/v1/docs",
+		"/favicon.ico",
+		"/static/",
 	}
 
 	for _, skipPath := range skipPaths {
@@ -128,9 +185,7 @@ func (a *AuditMiddleware) shouldSkipAudit(path string) bool {
 	return false
 }
 
-// getActionName 根据HTTP方法生成操作名称
-func (a *AuditMiddleware) getActionName(method string) string {
-	// 简化操作类型为基本的CRUD操作
+func (a *OptimizedAuditMiddleware) getActionName(method string) string {
 	switch method {
 	case "GET":
 		return "查询"
@@ -145,8 +200,7 @@ func (a *AuditMiddleware) getActionName(method string) string {
 	}
 }
 
-// getResourceName 获取资源名称
-func (a *AuditMiddleware) getResourceName(path string) string {
+func (a *OptimizedAuditMiddleware) getResourceName(path string) string {
 	cleanPath := strings.TrimPrefix(path, "/api/v1")
 	if strings.Contains(cleanPath, "?") {
 		cleanPath = strings.Split(cleanPath, "?")[0]
@@ -159,20 +213,15 @@ func (a *AuditMiddleware) getResourceName(path string) string {
 	return "unknown"
 }
 
-// sanitizeRequestBody 清理请求体中的敏感信息
-func (a *AuditMiddleware) sanitizeRequestBody(body []byte) string {
-	if len(body) == 0 {
+func (a *OptimizedAuditMiddleware) sanitizeRequestBody(body string) string {
+	if body == "" {
 		return ""
 	}
 
 	var data map[string]interface{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		// 如果不是JSON，直接返回字符串形式
-		bodyStr := string(body)
-		if len(bodyStr) > 1000 {
-			return bodyStr[:1000] + "..."
-		}
-		return bodyStr
+	if err := json.Unmarshal([]byte(body), &data); err != nil {
+		// 如果不是JSON，直接返回（已经截断过了）
+		return body
 	}
 
 	// 清理敏感字段
@@ -188,25 +237,20 @@ func (a *AuditMiddleware) sanitizeRequestBody(body []byte) string {
 	}
 
 	sanitized, _ := json.Marshal(data)
-	bodyStr := string(sanitized)
-	if len(bodyStr) > 1000 {
-		return bodyStr[:1000] + "..."
-	}
-	return bodyStr
+	return string(sanitized)
 }
 
-// sanitizeResponseBody 清理响应体中的敏感信息
-func (a *AuditMiddleware) sanitizeResponseBody(body []byte) string {
+func (a *OptimizedAuditMiddleware) sanitizeResponseBody(body []byte) string {
 	if len(body) == 0 {
 		return ""
 	}
 
 	var data map[string]interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
-		// 如果不是JSON，截断长度
+		// 如果不是JSON，截断长度返回
 		bodyStr := string(body)
 		if len(bodyStr) > 500 {
-			return bodyStr[:500] + "..."
+			return bodyStr[:500] + truncationSuffix
 		}
 		return bodyStr
 	}
@@ -224,35 +268,11 @@ func (a *AuditMiddleware) sanitizeResponseBody(body []byte) string {
 	sanitized, _ := json.Marshal(data)
 	bodyStr := string(sanitized)
 	if len(bodyStr) > 500 {
-		return bodyStr[:500] + "..."
+		return bodyStr[:500] + truncationSuffix
 	}
 	return bodyStr
 }
 
-// 辅助函数
-func getUserID(userID interface{}) uint {
-	if uid, ok := userID.(uint); ok {
-		return uid
-	}
-	if uid, ok := userID.(float64); ok {
-		return uint(uid)
-	}
-	return 0
+func (a *OptimizedAuditMiddleware) getUserID(userID uint) uint {
+	return userID
 }
-
-func getUsernameStr(username interface{}) string {
-	if name, ok := username.(string); ok {
-		return name
-	}
-	return ""
-}
-
-func isNumeric(s string) bool {
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
-}
-

@@ -168,13 +168,13 @@ func (s *EnglishLearningService) GetSongs(filter *SongFilter) (*PaginatedSongs, 
 	orderBy := "sort ASC, created_at DESC"
 	if filter.SortBy != "" {
 		validSortFields := map[string]bool{
-			"created_at":  true,
-			"updated_at":  true,
-			"title":       true,
-			"view_count":  true,
-			"like_count":  true,
-			"difficulty":  true,
-			"sort":        true,
+			"created_at": true,
+			"updated_at": true,
+			"title":      true,
+			"view_count": true,
+			"like_count": true,
+			"difficulty": true,
+			"sort":       true,
 		}
 		if validSortFields[filter.SortBy] {
 			direction := "DESC"
@@ -225,23 +225,23 @@ func (s *EnglishLearningService) CreateSong(song *models.Song) error {
 			// 检查分类是否已存在
 			var existingCategory models.LearningCategory
 			err := tx.Where("name_cn = ? OR name = ?", song.CategoryName, song.CategoryName).First(&existingCategory).Error
-			
+
 			if err == gorm.ErrRecordNotFound {
 				// 分类不存在，创建新分类
 				newCategory := &models.LearningCategory{
 					Name:      song.CategoryName,
 					NameCN:    song.CategoryName,
-					Icon:      "📚", // 默认图标
+					Icon:      "📚",       // 默认图标
 					Color:     "#667eea", // 默认颜色
 					IsActive:  true,
 					Sort:      0,
 					CreatedBy: song.CreatedBy,
 				}
-				
+
 				if err := tx.Create(newCategory).Error; err != nil {
 					return fmt.Errorf("failed to create category: %v", err)
 				}
-				
+
 				song.CategoryID = &newCategory.ID
 			} else if err != nil {
 				return fmt.Errorf("failed to check existing category: %v", err)
@@ -250,12 +250,12 @@ func (s *EnglishLearningService) CreateSong(song *models.Song) error {
 				song.CategoryID = &existingCategory.ID
 			}
 		}
-		
+
 		// 创建歌曲
 		if err := tx.Create(song).Error; err != nil {
 			return fmt.Errorf("failed to create song: %v", err)
 		}
-		
+
 		return nil
 	})
 }
@@ -269,29 +269,29 @@ func (s *EnglishLearningService) UpdateSong(id uint, updates map[string]interfac
 				var existingCategory models.LearningCategory
 				categoryNameStr := categoryName.(string)
 				err := tx.Where("name_cn = ? OR name = ?", categoryNameStr, categoryNameStr).First(&existingCategory).Error
-				
+
 				if err == gorm.ErrRecordNotFound {
 					// 获取当前歌曲信息以获取创建者
 					var currentSong models.Song
 					if err := tx.First(&currentSong, id).Error; err != nil {
 						return fmt.Errorf("failed to find song: %v", err)
 					}
-					
+
 					// 分类不存在，创建新分类
 					newCategory := &models.LearningCategory{
 						Name:      categoryNameStr,
 						NameCN:    categoryNameStr,
-						Icon:      "📚", // 默认图标
+						Icon:      "📚",       // 默认图标
 						Color:     "#667eea", // 默认颜色
 						IsActive:  true,
 						Sort:      0,
 						CreatedBy: currentSong.CreatedBy,
 					}
-					
+
 					if err := tx.Create(newCategory).Error; err != nil {
 						return fmt.Errorf("failed to create category: %v", err)
 					}
-					
+
 					updates["category_id"] = newCategory.ID
 				} else if err != nil {
 					return fmt.Errorf("failed to check existing category: %v", err)
@@ -300,16 +300,16 @@ func (s *EnglishLearningService) UpdateSong(id uint, updates map[string]interfac
 					updates["category_id"] = existingCategory.ID
 				}
 			}
-			
+
 			// 删除category_name字段，避免更新到数据库
 			delete(updates, "category_name")
 		}
-		
+
 		// 更新歌曲
 		if err := tx.Model(&models.Song{}).Where("id = ?", id).Updates(updates).Error; err != nil {
 			return fmt.Errorf("failed to update song: %v", err)
 		}
-		
+
 		return nil
 	})
 }
@@ -320,17 +320,17 @@ func (s *EnglishLearningService) DeleteSong(id uint) error {
 		if err := tx.Where("song_id = ?", id).Delete(&models.UserProgress{}).Error; err != nil {
 			return err
 		}
-		
+
 		// 删除歌曲词汇关联
 		if err := tx.Exec("DELETE FROM song_vocabularies WHERE song_id = ?", id).Error; err != nil {
 			return err
 		}
-		
+
 		// 删除歌曲
 		if err := tx.Delete(&models.Song{}, id).Error; err != nil {
 			return err
 		}
-		
+
 		return nil
 	})
 }
@@ -343,9 +343,9 @@ func (s *EnglishLearningService) LikeSong(songID, userID uint) error {
 	if err == gorm.ErrRecordNotFound {
 		// 创建新的进度记录
 		progress = models.UserProgress{
-			SongID:   songID,
-			UserID:   userID,
-			IsLiked:  true,
+			SongID:  songID,
+			UserID:  userID,
+			IsLiked: true,
 		}
 		if err := s.db.Create(&progress).Error; err != nil {
 			return fmt.Errorf("failed to create user progress: %v", err)
@@ -404,7 +404,7 @@ func (s *EnglishLearningService) UpdateUserProgress(userID, songID uint, updates
 			UserID: userID,
 			SongID: songID,
 		}
-		
+
 		// 设置默认值和更新字段
 		for key, value := range updates {
 			switch key {
@@ -430,10 +430,10 @@ func (s *EnglishLearningService) UpdateUserProgress(userID, songID uint, updates
 				}
 			}
 		}
-		
+
 		now := time.Now()
 		progress.LastStudiedAt = &now
-		
+
 		if err := s.db.Create(&progress).Error; err != nil {
 			return fmt.Errorf("failed to create user progress: %v", err)
 		}
@@ -443,7 +443,7 @@ func (s *EnglishLearningService) UpdateUserProgress(userID, songID uint, updates
 		// 更新现有记录
 		now := time.Now()
 		updates["last_studied_at"] = &now
-		
+
 		if err := s.db.Model(&progress).Updates(updates).Error; err != nil {
 			return fmt.Errorf("failed to update user progress: %v", err)
 		}
@@ -455,15 +455,15 @@ func (s *EnglishLearningService) UpdateUserProgress(userID, songID uint, updates
 func (s *EnglishLearningService) GetUserProgress(userID uint, songID *uint) ([]models.UserProgress, error) {
 	var progress []models.UserProgress
 	query := s.db.Preload("Song").Preload("Song.Category").Where("user_id = ?", userID)
-	
+
 	if songID != nil {
 		query = query.Where("song_id = ?", *songID)
 	}
-	
+
 	if err := query.Find(&progress).Error; err != nil {
 		return nil, fmt.Errorf("failed to get user progress: %v", err)
 	}
-	
+
 	return progress, nil
 }
 
@@ -471,51 +471,51 @@ func (s *EnglishLearningService) GetUserProgress(userID uint, songID *uint) ([]m
 
 func (s *EnglishLearningService) GetRecommendedSongs(userID uint, limit int) ([]*models.Song, error) {
 	var songs []*models.Song
-	
+
 	// 简单的推荐算法：基于用户喜欢的分类和未完成的歌曲
 	query := s.db.Model(&models.Song{}).
 		Preload("Category").
 		Where("is_published = ?", true).
-		Where("id NOT IN (?)", 
+		Where("id NOT IN (?)",
 			s.db.Table("user_progress").
 				Select("song_id").
 				Where("user_id = ? AND is_completed = ?", userID, true))
-	
+
 	if err := query.Order("view_count DESC, like_count DESC").
 		Limit(limit).
 		Find(&songs).Error; err != nil {
 		return nil, fmt.Errorf("failed to get recommended songs: %v", err)
 	}
-	
+
 	return songs, nil
 }
 
 // ====== 统计信息 ======
 
 type LearningStats struct {
-	TotalSongs        int64 `json:"total_songs"`
-	CompletedSongs    int64 `json:"completed_songs"`
-	TotalStudyMinutes int64 `json:"total_study_minutes"`
-	CurrentStreak     int   `json:"current_streak"`
+	TotalSongs        int64  `json:"total_songs"`
+	CompletedSongs    int64  `json:"completed_songs"`
+	TotalStudyMinutes int64  `json:"total_study_minutes"`
+	CurrentStreak     int    `json:"current_streak"`
 	FavoriteCategory  string `json:"favorite_category"`
-	Level             int   `json:"level"`
+	Level             int    `json:"level"`
 }
 
 func (s *EnglishLearningService) GetUserStats(userID uint) (*LearningStats, error) {
 	stats := &LearningStats{}
-	
+
 	// 总歌曲数
 	s.db.Model(&models.Song{}).Where("is_published = ?", true).Count(&stats.TotalSongs)
-	
+
 	// 已完成歌曲数
 	s.db.Model(&models.UserProgress{}).Where("user_id = ? AND is_completed = ?", userID, true).Count(&stats.CompletedSongs)
-	
+
 	// 总学习时长
 	s.db.Model(&models.UserProgress{}).Where("user_id = ?", userID).Select("COALESCE(SUM(study_time_minutes), 0)").Scan(&stats.TotalStudyMinutes)
-	
+
 	// 计算等级（基于学习时长）
 	stats.Level = int(stats.TotalStudyMinutes/60) + 1 // 每60分钟升一级
-	
+
 	// 获取最喜欢的分类
 	var categoryName string
 	s.db.Table("user_progress").
@@ -528,6 +528,6 @@ func (s *EnglishLearningService) GetUserStats(userID uint) (*LearningStats, erro
 		Limit(1).
 		Scan(&categoryName)
 	stats.FavoriteCategory = categoryName
-	
+
 	return stats, nil
 }

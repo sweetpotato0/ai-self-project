@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"gin-web-framework/internal/models"
 	"gin-web-framework/internal/service"
 	"gin-web-framework/pkg/logger"
@@ -12,15 +13,15 @@ import (
 
 // CategoryHandler 分类处理器
 type CategoryHandler struct {
-	categoryService *service.CategoryService
-	logger         logger.LoggerInterface
+	categoryService *service.OptimizedCategoryService
+	logger          logger.LoggerInterface
 }
 
 // NewCategoryHandler 创建分类处理器
-func NewCategoryHandler(categoryService *service.CategoryService, logger logger.LoggerInterface) *CategoryHandler {
+func NewCategoryHandler(categoryService *service.OptimizedCategoryService, logger logger.LoggerInterface) *CategoryHandler {
 	return &CategoryHandler{
 		categoryService: categoryService,
-		logger:         logger,
+		logger:          logger,
 	}
 }
 
@@ -42,7 +43,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 
-	if err := h.categoryService.CreateCategory(&category); err != nil {
+	if err := h.categoryService.CreateCategory(context.Background(), &category); err != nil {
 		response.InternalServerError(c, "创建分类失败: "+err.Error())
 		return
 	}
@@ -54,7 +55,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 func (h *CategoryHandler) GetCategoryTree(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	categories, err := h.categoryService.GetCategoryTree(userID)
+	categories, err := h.categoryService.GetCategoryTree(context.Background(), userID)
 	if err != nil {
 		response.InternalServerError(c, "获取分类树失败: "+err.Error())
 		return
@@ -67,7 +68,7 @@ func (h *CategoryHandler) GetCategoryTree(c *gin.Context) {
 func (h *CategoryHandler) GetAllCategories(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	categories, err := h.categoryService.GetAllCategories(userID)
+	categories, err := h.categoryService.GetAllCategories(context.Background(), userID)
 	if err != nil {
 		response.InternalServerError(c, "获取分类列表失败: "+err.Error())
 		return
@@ -87,7 +88,7 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	category, err := h.categoryService.GetCategoryByID(uint(id), userID)
+	category, err := h.categoryService.GetCategoryByID(context.Background(), uint(id), userID)
 	if err != nil {
 		response.NotFound(c, "分类不存在: "+err.Error())
 		return
@@ -113,7 +114,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	if err := h.categoryService.UpdateCategory(uint(id), userID, updates); err != nil {
+	if err := h.categoryService.UpdateCategory(context.Background(), uint(id), userID, updates); err != nil {
 		response.InternalServerError(c, "更新分类失败: "+err.Error())
 		return
 	}
@@ -132,7 +133,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	if err := h.categoryService.DeleteCategory(uint(id), userID); err != nil {
+	if err := h.categoryService.DeleteCategory(context.Background(), uint(id), userID); err != nil {
 		response.InternalServerError(c, "删除分类失败: "+err.Error())
 		return
 	}
@@ -144,7 +145,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 func (h *CategoryHandler) GetCategoryStats(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
-	stats, err := h.categoryService.GetCategoryStats(userID)
+	stats, err := h.categoryService.GetCategoryStats(context.Background(), userID)
 	if err != nil {
 		response.InternalServerError(c, "获取分类统计失败: "+err.Error())
 		return
